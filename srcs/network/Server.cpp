@@ -114,7 +114,7 @@ void Server::handleMode(int fd, const std::string& message)
 	std::string command;
 	std::string channelName;
 	std::string mode;
-	std::string userNickName;
+	std::string param;
 	
 	iss >> command;
 	std::vector<Client>::iterator iter = getClient(fd);
@@ -137,14 +137,20 @@ void Server::handleMode(int fd, const std::string& message)
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 		return;
 	}
-	if (!(iss >> mode) && !(iss >> userNickName))
+	if (!(iss >> mode) && !(iss >> param))
 	{
 		// If no mode is specified, return the current channel modes
         std::string response = generateRPL_CHANNELMODEIS(client, channel);
         send(fd, response.c_str(), response.size(), 0);
         return;
 	}
-
+	// if (!mode.compare("+o") || !mode.compare("-o")) 
+	// {
+	// 	if (!mode.compare("+o"))
+	// 	{ 
+	// 		// if ()
+	// 	}
+	// }
 }
 
 void Server::processQuit(int fd, const std::string& reason) 

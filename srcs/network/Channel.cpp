@@ -12,6 +12,7 @@ Channel::Channel(const std::string& channelName, const std::string& key, int fd)
 	modes[l] = false;
 	modes[t] = false;
 	modes[o] = false;
+	addOperator(fd);
 }
 
 Channel& Channel::operator=(const Channel& other)
@@ -36,6 +37,18 @@ Channel& Channel::operator=(const Channel& other)
 void Channel::addClient(int fd)
 {
 	clientFds.push_back(fd);
+}
+
+void Channel::addOperator(int fd)
+{
+	operFds.push_back(fd);
+}
+
+void Channel::removeOperator(int fd)
+{
+	std::vector<int>::iterator it = std::find(operFds.begin(), operFds.end(), fd);
+	if (it != operFds.end())// If foundoper
+		operFds.erase(it);    // Remove from the vector
 }
 
 void Channel::setKey(const std::string& key){this->key = key;}
