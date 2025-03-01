@@ -16,6 +16,7 @@ class Channel
 		std::vector<int> clientFds; //Client's fds of who are presently in the channel	
 		std::map<int, bool> _isInvited; // Key = Clients fd; Value = Whether client isInvited in the  channel;
 		std::vector<std::string> _isBanned; // Vector of nicknames of clients who are banned
+		std::map<std::string, bool> modes;
 	public:
 		Channel();
 		Channel(const std::string& channelName, const std::string& key, int fd);

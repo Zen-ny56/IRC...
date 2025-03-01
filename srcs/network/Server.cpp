@@ -77,10 +77,40 @@ void Server::receiveNewData(int fd)
 	}
 }
 
+std::string Server::generateRPL_CHANNELMODEIS(const Client& client, const Channel& channel)
+{
+	std::string modeString = "+";
+	std::string modeArgs;
+	// Check which modes are active in the channel
+	if (channel.modes.find("i") != channel.modes.end() && channel.modes.at("i"))
+		modeString += "i";
+	if (channel.modes.find("t") != channel.modes.end() && channel.modes.at("t"))
+		modeString += "t";
+	if (channel.modes.find("k") != channel.modes.end() && channel.modes.at("k"))
+	{
+		modeString += "k";
+		modeArgs += " " + channel.getKey();
+    }
+    if (channel.modes.find("o") != channel.modes.end() && channel.modes.at("o"))
+        modeString += "o";
+    if (channel.modes.find("l") != channel.modes.end() && channel.modes.at("l")) {
+        modeString += "l";
+        modeArgs += " " + std::to_string(channel.getMax());
+    }
+
+    // If no modes are active, return an empty mode string
+    if (modeString == "+")
+        modeString.clear();
+
+    // Format response
+    std::string response = ":" + serverName + " 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + modeArgs + "\r\n";
+    return response;
+}
+
 void Server::handleMode(int fd, const std::string& message)
 {
 	std::istringstream iss(message);
-	std::string channel;
+	std::string channelName;
 	std::string mode;
 	std::string userNickName;
 	
@@ -88,23 +118,25 @@ void Server::handleMode(int fd, const std::string& message)
 	if (iter == clients.end())
 		throw std::runtime_error("Error finding client\n");
 	Client& client = (*this)[iter];
-	if (!(iss >> channel))
+	if (!(iss >> channelName))
 	{ std::cout << RED << "Error: Empty parameter" << WHI << std::endl; return; }
 
-	std::map<std::string, Channel>::iterator it = channels.find(channel);
+	std::map<std::string, Channel>::iterator it = channels.find(channelName);
 	if (it == channels.end())
 	{
-		std::string msg = std::string(RED) + "403 " + client.getNickname() + " " + channel + " :No such channel" + std::string(WHI);
+		std::string msg = std::string(RED) + "403 " + client.getNickname() + " " + channelName + " :No such channel" + std::string(WHI);
 		send(fd, msg.c_str(), msg.size(), 0);
+		return;
  	}
-	// if (!(iss >> mode) && !(iss >> channel))
-	if (mode.empty() || (mode[0] != '+' && mode[0] != '-'))
+	Channel& channel = it->second;
+	if (!(iss >> mode) && !(iss >> userNickName))
 	{
-		std::cout << "Invalid mode string format." << std::endl;
-		printAvailableModes();
+		// If no mode is specified, return the current channel modes
+        std::string response = generateRPL_CHANNELMODEIS(client, channel);
+        send(fd, response.c_str(), response.size(), 0);
+        return;
 	}
-	{ std::cout << RED << "Error: Empty parameter" << WHI << std::endl; return; }
-	
+
 }
 
 void Server::processQuit(int fd, const std::string& reason) 
