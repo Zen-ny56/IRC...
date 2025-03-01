@@ -70,14 +70,43 @@ void Server::receiveNewData(int fd)
 			processSasl(fd, message);
 		else if (message.find("CAP END") != std::string::npos)
 			capEnd(fd);
-		// else if (message.find("MODE") != std::string::npos)
-		// 	handleMode(fd, message);
+		else if (message.find("MODE") != std::string::npos)
+			handleMode(fd, message);
 		else
 			std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
 	}
 }
 
-// void Server::handleMode(int fd, const std::string& me)
+void Server::handleMode(int fd, const std::string& message)
+{
+	std::istringstream iss(message);
+	std::string channel;
+	std::string mode;
+	std::string userNickName;
+	
+	std::vector<Client>::iterator iter = getClient(fd);
+	if (iter == clients.end())
+		throw std::runtime_error("Error finding client\n");
+	Client& client = (*this)[iter];
+	if (!(iss >> channel))
+	{ std::cout << RED << "Error: Empty parameter" << WHI << std::endl; return; }
+
+	std::map<std::string, Channel>::iterator it = channels.find(channel);
+	if (it == channels.end())
+	{
+		std::string msg = std::string(RED) + "403 " + client.getNickname() + " " + channel + " :No such channel" + std::string(WHI);
+		send(fd, msg.c_str(), msg.size(), 0);
+ 	}
+	// if (!(iss >> mode) && !(iss >> channel))
+	if (mode.empty() || (mode[0] != '+' && mode[0] != '-'))
+	{
+		std::cout << "Invalid mode string format." << std::endl;
+		printAvailableModes();
+	}
+	{ std::cout << RED << "Error: Empty parameter" << WHI << std::endl; return; }
+	
+}
+
 void Server::processQuit(int fd, const std::string& reason) 
 {
     std::string nickname = clients[fd].getNickname();
