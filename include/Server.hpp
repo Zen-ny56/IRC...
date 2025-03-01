@@ -69,6 +69,6 @@ class Server //-> class for server
         std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname);
         std::string trim(const std::string& str);
         void handleMode(int fd, const std::string& message);
-        std::string generateRPL_CHANNELMODEIS(const Client& client, const Channel& channel);
+        std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel);
 };
   

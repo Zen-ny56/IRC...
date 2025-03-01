@@ -4,7 +4,15 @@ Channel::Channel(){}
 
 Channel::~Channel(){}
 
-Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), priOperator(fd), topic(""), inviteOnly(false), max(INT_MAX){}
+Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), priOperator(fd), topic(""), inviteOnly(false), max(INT_MAX)
+{
+	std::string i = "i"; std::string k = "k"; std::string l = "l"; std::string t = "t"; std::string o = "o";
+	modes[i] = false;
+	modes[k] = false;
+	modes[l] = false;
+	modes[t] = false;
+	modes[o] = false;
+}
 
 Channel& Channel::operator=(const Channel& other)
 {
@@ -17,6 +25,7 @@ Channel& Channel::operator=(const Channel& other)
 		this->topic = other.topic;
 		this->inviteOnly = other.inviteOnly;
 		this->max = other.max;
+		this->modes = other.modes;
 		this->clientFds = other.clientFds;
 		this->_isInvited = other._isInvited;
 		this->_isBanned = other._isBanned;
@@ -107,3 +116,7 @@ std::vector<int> Channel::listUsers()
 }
 
 int Channel::getPriOperator(){return this->priOperator;}
+
+std::map<std::string, bool> Channel::getModes(){return this->modes;}
+
+std::string Channel::getChannelName(){return this->channelName;}

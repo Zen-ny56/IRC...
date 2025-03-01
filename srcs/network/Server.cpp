@@ -77,50 +77,52 @@ void Server::receiveNewData(int fd)
 	}
 }
 
-std::string Server::generateRPL_CHANNELMODEIS(const Client& client, const Channel& channel)
+std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
 {
 	std::string modeString = "+";
 	std::string modeArgs;
+	std::map<std::string, bool> modes = channel.getModes();
 	// Check which modes are active in the channel
-	if (channel.modes.find("i") != channel.modes.end() && channel.modes.at("i"))
+	if (modes.find("i") != modes.end() && modes.at("i"))
 		modeString += "i";
-	if (channel.modes.find("t") != channel.modes.end() && channel.modes.at("t"))
+	if (modes.find("t") != modes.end() && modes.at("t"))
 		modeString += "t";
-	if (channel.modes.find("k") != channel.modes.end() && channel.modes.at("k"))
+	if (modes.find("k") != modes.end() && modes.at("k"))
 	{
 		modeString += "k";
 		modeArgs += " " + channel.getKey();
     }
-    if (channel.modes.find("o") != channel.modes.end() && channel.modes.at("o"))
+    if (modes.find("o") != modes.end() && modes.at("o"))
         modeString += "o";
-    if (channel.modes.find("l") != channel.modes.end() && channel.modes.at("l")) {
+    if (modes.find("l") != modes.end() && modes.at("l")) 
+	{
         modeString += "l";
         modeArgs += " " + std::to_string(channel.getMax());
     }
 
     // If no modes are active, return an empty mode string
     if (modeString == "+")
-        modeString.clear();
-
+		 modeString.clear();
     // Format response
-    std::string response = ":" + serverName + " 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + modeArgs + "\r\n";
-    return response;
+	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " +" + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n";
+	return (response);
 }
 
 void Server::handleMode(int fd, const std::string& message)
 {
 	std::istringstream iss(message);
+	std::string command;
 	std::string channelName;
 	std::string mode;
 	std::string userNickName;
 	
+	iss >> command;
 	std::vector<Client>::iterator iter = getClient(fd);
 	if (iter == clients.end())
 		throw std::runtime_error("Error finding client\n");
 	Client& client = (*this)[iter];
 	if (!(iss >> channelName))
 	{ std::cout << RED << "Error: Empty parameter" << WHI << std::endl; return; }
-
 	std::map<std::string, Channel>::iterator it = channels.find(channelName);
 	if (it == channels.end())
 	{
@@ -129,6 +131,12 @@ void Server::handleMode(int fd, const std::string& message)
 		return;
  	}
 	Channel& channel = it->second;
+	if (channel.getPriOperator() != fd)
+	{
+		std::string errorMsg = std::string(RED) + ":ircserv 482 " + client.getNickname() + " " + channel.getChannelName() + " :You're not channel operator\r\n";
+		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+		return;
+	}
 	if (!(iss >> mode) && !(iss >> userNickName))
 	{
 		// If no mode is specified, return the current channel modes
@@ -534,10 +542,10 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
         send(fd, errorMsg.c_str(), errorMsg.size(), 0);
         return;
     }
-	
+
 	// 4. Add the client to the channel
 	channel.addClient(fd);
-	
+
 	// 5. Broadcast JOIN message to all clients in the channel
 	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(WHI);
 	channel.broadcastToChannel(joinMessage);
