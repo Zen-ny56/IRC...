@@ -9,6 +9,7 @@ class Channel
 		// std::map<char, bool> modes;
 		const std::string channelName;
 		std::string key;
+		int priOperator;
 		std::string topic;
 		bool inviteOnly;
 		int max;
@@ -17,9 +18,10 @@ class Channel
 		std::vector<std::string> _isBanned; // Vector of nicknames of clients who are banned
 	public:
 		Channel();
-		Channel(const std::string& channelName, const std::string& key);
+		Channel(const std::string& channelName, const std::string& key, int fd);
 		Channel& operator=(const Channel& copy);
 		~Channel();
+		int getPriOperator();
 		void addClient(int fd);
 		void setKey(const std::string& key);
 		void setMax(int max);
