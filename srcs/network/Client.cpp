@@ -14,6 +14,10 @@ void Client::setNickname(std::string nickName)
     this->nickAuthen = true;
 }
 
+void Client::setChannelName(const std::string &name){
+    this->channelName = name;
+}
+
 void Client::setUserName(std::string userName, std::string realName)
 {
     this->userName = userName;

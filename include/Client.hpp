@@ -13,6 +13,8 @@ private:
 	int fd; //-> client file descriptor
 	std::string IPadd; //-> client ip address
 	std::string nickName;
+	std::string channelName; // To store the channel the client is in
+
 public:
 	Client();// Default constructor
 	int getFd();// Getter for fd
@@ -29,4 +31,7 @@ public:
 	std::string getIPadd();
 	std::string getUserName();
 	std::string getNickname();
+	//new functions
+	void setChannelName(const std::string &name);
+	std::string getChannelName() const;
 };
