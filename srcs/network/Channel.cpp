@@ -4,7 +4,7 @@ Channel::Channel(){}
 
 Channel::~Channel(){}
 
-Channel::Channel(const std::string& channelName, const std::string& key): channelName(channelName), key(key), topic(""), inviteOnly(false), max(INT_MAX){}
+Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), priOperator(fd), topic(""), inviteOnly(false), max(INT_MAX){}
 
 Channel& Channel::operator=(const Channel& other)
 {
@@ -13,6 +13,7 @@ Channel& Channel::operator=(const Channel& other)
 		// Assign each member variable
 		// this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
 		this->key = other.key;                 // key is also const and cannot be reassigned
+		this->priOperator = other.priOperator;
 		this->topic = other.topic;
 		this->inviteOnly = other.inviteOnly;
 		this->max = other.max;
@@ -104,3 +105,5 @@ std::vector<int> Channel::listUsers()
 	}
 	return(temp);
 }
+
+int Channel::getPriOperator(){return this->priOperator;}

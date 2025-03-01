@@ -70,11 +70,14 @@ void Server::receiveNewData(int fd)
 			processSasl(fd, message);
 		else if (message.find("CAP END") != std::string::npos)
 			capEnd(fd);
+		// else if (message.find("MODE") != std::string::npos)
+		// 	handleMode(fd, message);
 		else
 			std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
 	}
 }
 
+// void Server::handleMode(int fd, const std::string& me)
 void Server::processQuit(int fd, const std::string& reason) 
 {
     std::string nickname = clients[fd].getNickname();
@@ -439,7 +442,7 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	if (it == channels.end())
 	{
 		// Channel doesn't exist, so create it
-		channels[channelName] = Channel(channelName, key);
+		channels[channelName] = Channel(channelName, key, client.getFd());
 		it = channels.find(channelName); // Re-get the iterator after creation
 	}
 	Channel& channel = it->second;
