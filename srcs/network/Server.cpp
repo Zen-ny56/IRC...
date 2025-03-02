@@ -149,7 +149,8 @@ void Server::handleMode(int fd, const std::string& message)
 	}
 	if (!mode.compare("+o") || !mode.compare("-o"))
 	{
-		std::map<std::string, int>::iterator it = nicknameMap.find(channelName);
+		std::cout << "=======" << param << "=======" << std::endl;
+		std::map<std::string, int>::iterator it = nicknameMap.find(param);
 		if (it == nicknameMap.end())
 		{
 			std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
