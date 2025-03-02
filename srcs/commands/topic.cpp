@@ -52,7 +52,7 @@ void Server::topicCommand(int fd, std::string const &message)
     if (channelIt == channels.end())
     {
         std::string err = "403 " + client.getNickname() + " " + channelName + " :No such channel\r\n";
-        send(fd, err.c_str(), err.size(), 0);ren
+        send(fd, err.c_str(), err.size(), 0);
         return;
     }
     Channel &channel = channelIt->second;
