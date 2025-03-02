@@ -72,4 +72,5 @@ public:
     // new functions
     void kickCommand(int fd, const std::string &message);
     void topicCommand(int fd, const std::string &message);
+    void inviteCommand(int fd, std::string const &message);
 };

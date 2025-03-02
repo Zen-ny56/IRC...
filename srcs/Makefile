@@ -6,7 +6,7 @@ INCLUDE = -I ./include
 
 OBJDIR = obj
 SRC 	  = main.cpp network/Client.cpp network/Server.cpp network/Channel.cpp commands/kick.cpp \
-			commands/topic.cpp
+			commands/topic.cpp commands/invite.cpp
 OBJ_FILES = $(addprefix $(OBJDIR)/, $(SRC:.cpp=.o))
 
 $(OBJDIR)/%.o: %.cpp

@@ -68,7 +68,6 @@ void Server::kickCommand(int fd, const std::string &message)
 
         if (channelIt == channels.end())
         {
-            std::cout << "Channel not found!" << std::endl; // Debugging log
             std::string errormsg = std::string(RED) + "403 " + channelName + " :No such channel\r\n" + std::string(EN);
             send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NOSUCHCHANNEL
             return;

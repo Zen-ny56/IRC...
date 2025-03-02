@@ -74,6 +74,8 @@ void Server::receiveNewData(int fd)
 			kickCommand(fd, message);
 		else if (message.rfind("TOPIC ", 0) == 0)
 			topicCommand(fd, message);
+		else if (message.rfind("INVITE ", 0) == 0)
+			inviteCommand(fd, message);
 		else if (message.find("CAP REQ") != std::string::npos)
 			processCapReq(fd, message);
 		else if (message.find("QUIT", 0) == 0)

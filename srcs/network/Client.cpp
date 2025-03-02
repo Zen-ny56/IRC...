@@ -18,6 +18,10 @@ void Client::setChannelName(const std::string &name){
     this->channelName = name;
 }
 
+std::string Client::getChannelName() const{
+    return channelName;
+}
+
 void Client::setUserName(std::string userName, std::string realName)
 {
     this->userName = userName;
