@@ -42,6 +42,9 @@ void Channel::addClient(int fd)
 void Channel::addOperator(int fd)
 {
 	operFds.push_back(fd);
+	std::string o = "o";
+	std::map<std::string, bool>::iterator it = modes.find(o);
+	it->second = true;
 }
 
 void Channel::removeOperator(int fd)
@@ -49,6 +52,9 @@ void Channel::removeOperator(int fd)
 	std::vector<int>::iterator it = std::find(operFds.begin(), operFds.end(), fd);
 	if (it != operFds.end())// If foundoper
 		operFds.erase(it);    // Remove from the vector
+	std::string o = "o";
+	std::map<std::string, bool>::iterator bt = modes.find(o);
+	bt->second = false;
 }
 
 void Channel::setKey(const std::string& key){this->key = key;}

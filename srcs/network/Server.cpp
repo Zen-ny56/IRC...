@@ -144,13 +144,34 @@ void Server::handleMode(int fd, const std::string& message)
         send(fd, response.c_str(), response.size(), 0);
         return;
 	}
-	// if (!mode.compare("+o") || !mode.compare("-o")) 
-	// {
-	// 	if (!mode.compare("+o"))
-	// 	{ 
-	// 		// if ()
-	// 	}
-	// }
+	if (!mode.compare("+o") || !mode.compare("-o"))
+	{
+		std::map<std::string, int>::iterator it = nicknameMap.find(channelName);
+		if (it == nicknameMap.end())
+		{
+			std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
+			send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+		}
+		int targetFd = it->second;
+		if (!channel.isInChannel(targetFd))
+		{
+			std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
+			send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+		}
+		if (!mode.compare("+o"))
+		{
+			channel.addOperator(targetFd);
+			std::string msg = std::string(GRE) + client.getNickname() + " sets mode +o " + it->first + " on " + channel.getChannelName() + "\r\n";
+			channel.broadcastToChannel(msg);
+		}
+		else if (!mode.compare("-o"))
+		{
+			channel.removeOperator(targetFd);
+			std::string msg = std::string(RED) + client.getNickname() + " sets mode -o " + it->first + " on " + channel.getChannelName() + "\r\n";
+			channel.broadcastToChannel(msg);
+		}
+	}
+
 }
 
 void Server::processQuit(int fd, const std::string& reason) 
