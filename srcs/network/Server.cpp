@@ -93,7 +93,10 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
 		modeArgs += " " + channel.getKey();
     }
     if (modes.find("o") != modes.end() && modes.at("o"))
-        modeString += "o";
+	{
+		std::cout << RED << "------------" << std::endl;
+		modeString += "o";
+	}
     if (modes.find("l") != modes.end() && modes.at("l")) 
 	{
         modeString += "l";
@@ -104,7 +107,7 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
     if (modeString == "+")
 		 modeString.clear();
     // Format response
-	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " +" + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n";
+	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " +" + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
 	return (response);
 }
 
@@ -151,22 +154,28 @@ void Server::handleMode(int fd, const std::string& message)
 		{
 			std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
 			send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+			return;
 		}
 		int targetFd = it->second;
 		if (!channel.isInChannel(targetFd))
 		{
 			std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
 			send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+			return;
 		}
 		if (!mode.compare("+o"))
 		{
 			channel.addOperator(targetFd);
+			std::map<std::string, bool>::iterator it = channel.getModes().find(mode);
+			it->second = true;
 			std::string msg = std::string(GRE) + client.getNickname() + " sets mode +o " + it->first + " on " + channel.getChannelName() + "\r\n";
 			channel.broadcastToChannel(msg);
 		}
 		else if (!mode.compare("-o"))
 		{
 			channel.removeOperator(targetFd);
+			std::map<std::string, bool>::iterator it = channel.getModes().find(mode);
+			it->second = false;
 			std::string msg = std::string(RED) + client.getNickname() + " sets mode -o " + it->first + " on " + channel.getChannelName() + "\r\n";
 			channel.broadcastToChannel(msg);
 		}
@@ -278,6 +287,7 @@ void Server::sendCapabilities(int fd)
 {
 	std::string capMessage = "CAP * LS :multi-prefix sasl\r\n";
 	send(fd, capMessage.c_str(), capMessage.size(), 0);
+	return ;
 }
 
 void Server::processCapReq(int fd, const std::string& message)
@@ -285,6 +295,7 @@ void Server::processCapReq(int fd, const std::string& message)
 	if (message.find("CAP REQ") != std::string::npos){
 		std::string capAck = "CAP * ACK :multi-prefix sasl\r\n";
 		send(fd, capAck.c_str(), capAck.size(), 0);
+		return ;
 	}
 }
 
@@ -457,6 +468,7 @@ void Server::capEnd(int fd)
 {
 	std::string capEnd = "CAP END\r\n";
 	send(fd, capEnd.c_str(), capEnd.size(), 0);
+	return;
 }
 
 std::vector<Client>::iterator Server::getClient(int fd)

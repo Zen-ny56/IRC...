@@ -20,7 +20,7 @@ Channel& Channel::operator=(const Channel& other)
 	if (this != &other)
 	{
 		// Assign each member variable
-		// this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
+		this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
 		this->key = other.key;                 // key is also const and cannot be reassigned
 		this->priOperator = other.priOperator;
 		this->topic = other.topic;
@@ -42,9 +42,7 @@ void Channel::addClient(int fd)
 void Channel::addOperator(int fd)
 {
 	operFds.push_back(fd);
-	std::string o = "o";
-	std::map<std::string, bool>::iterator it = modes.find(o);
-	it->second = true;
+
 }
 
 void Channel::removeOperator(int fd)
@@ -52,9 +50,6 @@ void Channel::removeOperator(int fd)
 	std::vector<int>::iterator it = std::find(operFds.begin(), operFds.end(), fd);
 	if (it != operFds.end())// If foundoper
 		operFds.erase(it);    // Remove from the vector
-	std::string o = "o";
-	std::map<std::string, bool>::iterator bt = modes.find(o);
-	bt->second = false;
 }
 
 void Channel::setKey(const std::string& key){this->key = key;}
@@ -136,6 +131,7 @@ std::vector<int> Channel::listUsers()
 
 int Channel::getPriOperator(){return this->priOperator;}
 
-std::map<std::string, bool> Channel::getModes(){return this->modes;}
+std::map<std::string, bool> & Channel::getModes(){return this->modes;}
 
-std::string Channel::getChannelName(){return this->channelName;}
+std::string Channel::getChannelName(){ 	std::cout << channelName << std::endl;
+return this->channelName;}
