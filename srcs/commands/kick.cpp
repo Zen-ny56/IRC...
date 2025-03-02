@@ -90,7 +90,7 @@ void Server::kickCommand(int fd, const std::string &message)
             std::vector<Client>::iterator targetIt = getClientUsingNickname(*userIt);
             if (targetIt == clients.end())
             {
-                std::string errormsg = std::string(RED) + "401 " + *userIt + " :No such user\r\n";
+                std::string errormsg = std::string(RED) + "401 " + *userIt + " :No such user\r\n" + std::string(EN);
                 send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NOSUCHNICK
                 continue;
             }
@@ -106,7 +106,7 @@ void Server::kickCommand(int fd, const std::string &message)
             }
 
             // Step 8: Send kick message to the channel
-            std::string kickMessage = ":" + client.getNickname() + " KICK " + channelName + " " + *userIt;
+            std::string kickMessage = ":" + client.getNickname() + " KICKED " + channelName + " " + *userIt;
             if (!comment.empty())
             {
                 kickMessage += " :" + comment;

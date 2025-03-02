@@ -11,7 +11,7 @@ void Server::topicCommand(int fd, std::string const &message)
     Client &client = *it;
 
     // Ensure message has enough content
-    if (message.size() < 7) 
+    if (message.size() < 7)
     {
         std::string err = "461 " + client.getNickname() + " TOPIC :Not enough parameters\r\n";
         send(fd, err.c_str(), err.size(), 0);
@@ -21,7 +21,7 @@ void Server::topicCommand(int fd, std::string const &message)
     // Extract channel name and topic from the message
     std::string trimmed = message.substr(6); // Remove "TOPIC " prefix
     std::istringstream stream(trimmed);
-    
+
     std::string channelName;
     stream >> channelName; // Extract channel name
 
@@ -35,18 +35,18 @@ void Server::topicCommand(int fd, std::string const &message)
 
     // Extract topic, if provided
     std::string topic;
-    if (stream.peek() == ' ') 
+    if (stream.peek() == ' ')
     {
         stream.get(); // Consume leading space
     }
     std::getline(stream, topic);
-    
+
     // Remove leading ':' if present (standard IRC topic format)
-    if (!topic.empty() && topic[0] == ':') 
+    if (!topic.empty() && topic[0] == ':')
     {
         topic = topic.substr(1);
     }
-    
+
     // Check if the channel exists
     std::map<std::string, Channel>::iterator channelIt = channels.find(channelName);
     if (channelIt == channels.end())

@@ -10,7 +10,7 @@ void Server::inviteCommand(int fd, std::string const &message) {
             throw std::runtime_error("Client Not Found");
         }
         Client &client = *it;
-
+        
         // Trim and extract nickname and channel name
         std::string trimmed = message.substr(7);
         std::istringstream re(trimmed);
