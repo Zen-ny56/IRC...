@@ -43,4 +43,5 @@ class Channel
 		int isInviteOnly();
 		std::string getChannelName();
 		void removeOperator(int fd);
+		int	 isOperator(int fd);
 };

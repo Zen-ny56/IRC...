@@ -107,7 +107,7 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
     if (modeString == "+")
 		 modeString.clear();
     // Format response
-	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " +" + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
+	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
 	return (response);
 }
 
@@ -134,9 +134,9 @@ void Server::handleMode(int fd, const std::string& message)
 		return;
  	}
 	Channel& channel = it->second;
-	if (channel.getPriOperator() != fd)
+	if (!channel.isOperator(fd))
 	{
-		std::string errorMsg = std::string(RED) + ":ircserv 482 " + client.getNickname() + " " + channel.getChannelName() + " :You're not channel operator\r\n";
+		std::string errorMsg = std::string(RED) + ":ircserv 482 " + client.getNickname() + " " + channelName + " :You're not a channel operator\r\n" + std::string(WHI);
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 		return;
 	}
@@ -149,6 +149,7 @@ void Server::handleMode(int fd, const std::string& message)
 	}
 	if (!mode.compare("+o") || !mode.compare("-o"))
 	{
+		iss >> param;
 		std::cout << "=======" << param << "=======" << std::endl;
 		std::map<std::string, int>::iterator it = nicknameMap.find(param);
 		if (it == nicknameMap.end())
@@ -167,17 +168,29 @@ void Server::handleMode(int fd, const std::string& message)
 		if (!mode.compare("+o"))
 		{
 			channel.addOperator(targetFd);
-			std::map<std::string, bool>::iterator it = channel.getModes().find(mode);
+			std::string extracted;
+			for (std::string::size_type i = 0; i < mode.length(); i++)
+			{
+				if (std::isalpha(mode[i]))
+					extracted += mode[i];
+			}
+			std::map<std::string, bool>::iterator it = channel.getModes().find(extracted);
 			it->second = true;
-			std::string msg = std::string(GRE) + client.getNickname() + " sets mode +o " + it->first + " on " + channel.getChannelName() + "\r\n";
+			std::string msg = std::string(GRE) + client.getNickname() + " sets mode +o " + " on " + channel.getChannelName() + "\r\n" + std::string(WHI);
 			channel.broadcastToChannel(msg);
 		}
 		else if (!mode.compare("-o"))
 		{
 			channel.removeOperator(targetFd);
-			std::map<std::string, bool>::iterator it = channel.getModes().find(mode);
+			std::string extracted;
+			for (std::string::size_type i = 0; i < mode.length(); i++)
+			{
+				if (std::isalpha(mode[i]))
+					extracted += mode[i];
+			}
+			std::map<std::string, bool>::iterator it = channel.getModes().find(extracted);
 			it->second = false;
-			std::string msg = std::string(RED) + client.getNickname() + " sets mode -o " + it->first + " on " + channel.getChannelName() + "\r\n";
+			std::string msg = std::string(RED) + client.getNickname() + " sets mode -o " + " on " + channel.getChannelName() + "\r\n" + std::string(WHI);
 			channel.broadcastToChannel(msg);
 		}
 	}
@@ -269,7 +282,7 @@ void Server::serverInit(int port, std::string pass)
 	{ //-> run the server until the signal is received
 
 		if ((poll(&fds[0],fds.size(),-1) == -1) && Server::signal == false) //-> wait for an event
-			throw(std::runtime_error("poll() faild"));
+			throw(std::runtime_error("poll() failed"));
 
 		for (size_t i = 0; i < fds.size(); i++){ //-> check all file descriptors
 			if (fds[i].revents & POLLIN)

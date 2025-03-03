@@ -27,6 +27,7 @@ Channel& Channel::operator=(const Channel& other)
 		this->inviteOnly = other.inviteOnly;
 		this->max = other.max;
 		this->modes = other.modes;
+		this->operFds = other.operFds;
 		this->clientFds = other.clientFds;
 		this->_isInvited = other._isInvited;
 		this->_isBanned = other._isBanned;
@@ -42,7 +43,6 @@ void Channel::addClient(int fd)
 void Channel::addOperator(int fd)
 {
 	operFds.push_back(fd);
-
 }
 
 void Channel::removeOperator(int fd)
@@ -135,3 +135,14 @@ std::map<std::string, bool> & Channel::getModes(){return this->modes;}
 
 std::string Channel::getChannelName(){ 	std::cout << channelName << std::endl;
 return this->channelName;}
+
+int Channel::isOperator(int fd)
+{
+	for (std::vector<int>::iterator it = operFds.begin(); it != operFds.end(); ++it)
+	{
+		std::cout << "Going through the loop" <<  *it << std::endl;
+		if (*it == fd)
+			return (1);
+	}
+	return (0);
+}
