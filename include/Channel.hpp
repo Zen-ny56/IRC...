@@ -40,6 +40,7 @@ class Channel
 		std::vector<int> listUsers();
 		void setTopic(const std::string& topic);
 		std::map<std::string, bool> & getModes();
+		std::vector<int> & getOperFds();
 		int isInviteOnly();
 		std::string getChannelName();
 		void removeOperator(int fd);

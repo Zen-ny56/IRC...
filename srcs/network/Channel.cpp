@@ -146,3 +146,5 @@ int Channel::isOperator(int fd)
 	}
 	return (0);
 }
+
+std::vector<int> & Channel::getOperFds(){return this->operFds;}

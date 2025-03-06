@@ -81,6 +81,7 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
 {
 	std::string modeString = "+";
 	std::string modeArgs;
+	std::vector<int> operators = channel.getOperFds();
 	std::map<std::string, bool> modes = channel.getModes();
 	// Check which modes are active in the channel
 	if (modes.find("i") != modes.end() && modes.at("i"))
@@ -94,7 +95,12 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
     }
     if (modes.find("o") != modes.end() && modes.at("o"))
 	{
-		std::cout << RED << "------------" << std::endl;
+		for (std::vector<int>::iterator it = operators.begin(); it != operators.end(); ++it)
+		{
+			std::vector<Client>::iterator bt = getClient(*it);
+			Client& client = (*this)[bt];
+			modeArgs += " " + client.getNickname();
+		}
 		modeString += "o";
 	}
     if (modes.find("l") != modes.end() && modes.at("l")) 
@@ -104,10 +110,10 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
     }
 
     // If no modes are active, return an empty mode string
-    if (modeString == "+")
-		 modeString.clear();
+    // if (modeString == "+")
+	// 	 modeString.clear();
     // Format response
-	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
+	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
 	return (response);
 }
 
