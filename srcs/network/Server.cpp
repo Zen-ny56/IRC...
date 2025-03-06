@@ -602,7 +602,7 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 
 	// 4. Add the client to the channel
 	channel.addClient(fd);
-
+	std::cout << channel.getKey() << std::endl;
 	// 5. Broadcast JOIN message to all clients in the channel
 	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(WHI);
 	channel.broadcastToChannel(joinMessage);
