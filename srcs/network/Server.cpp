@@ -93,15 +93,13 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
 		modeString += "k";
 		modeArgs += " " + channel.getKey();
     }
-    if (modes.find("o") != modes.end() && modes.at("o"))
+    if (modes.find("o") != modes.end())
 	{
 		for (std::vector<int>::iterator it = operators.begin(); it != operators.end(); ++it)
 		{
-			std::vector<Client>::iterator bt = getClient(*it);
-			Client& client = (*this)[bt];
-			modeArgs += " " + client.getNickname();
+			modeString += "o";
+			break;
 		}
-		modeString += "o";
 	}
     if (modes.find("l") != modes.end() && modes.at("l")) 
 	{
