@@ -191,6 +191,28 @@ void Server::handleMode(int fd, const std::string& message)
 			resetModeBool(channel, mode, false);
 		}
 	}
+	else if (!mode.compare("+l") || !mode.compare("-l"))
+	{
+		iss >> param;
+		int limit;
+		if (isNumber(param))
+			limit = stringToInt(param);
+		else
+		{
+			std::string errorMsg = std::string(RED) + ":ircserv  696 " + client.getNickname() + " " + channel.getChannelName() + " l " + param + " :Invalid mode parameter\r\n";
+			send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+		}
+		if (!mode.compare("+l"))
+		{
+			channel.setMax(limit);
+			resetModeBool(channel, mode, true);
+		}
+		if (!mode.compare("-l"))
+		{
+			channel.setMax(INT_MAX);
+			resetModeBool(channel, mode, false);
+		}
+	}
 
 }
 
@@ -754,4 +776,22 @@ std::string Server::trim(const std::string& str)
     size_t start = str.find_first_not_of("\r\n\t");
     size_t end = str.find_last_not_of("\r\n\t");
     return (start == std::string::npos || end == std::string::npos) ? "" : str.substr(start, end - start + 1);
+}
+
+bool isNumber(const std::string &str)
+{
+    for (size_t i = 0; i < str.length(); i++)
+	{
+        if (!std::isdigit(str[i])) // Check if all characters are digits
+            return false;
+    }
+    return !str.empty(); // Ensure the string isn't empty
+}
+
+int stringToInt(const std::string &str)
+{
+	std::stringstream ss(str);
+	int number;
+	ss >> number; // Convert string to integer
+	return number;
 }
