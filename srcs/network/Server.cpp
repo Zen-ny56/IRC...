@@ -213,6 +213,34 @@ void Server::handleMode(int fd, const std::string& message)
 			resetModeBool(channel, mode, false);
 		}
 	}
+	else if (!mode.compare("+i") || !mode.compare("-i"))
+	{
+		iss >> param;
+		if (!mode.compare("+i"))
+		{
+			channel.setInviteOnly(true);
+			resetModeBool(channel, mode, true);
+		}
+		else if (!mode.compare("-i"))
+		{
+			channel.setInviteOnly(false);
+			resetModeBool(channel, mode, false);
+		}
+	}
+	else if (!mode.compare("+t") || !mode.compare("-t"))
+	{
+		iss >> param;
+		if (!mode.compare("+t"))
+		{
+			channel.setTopRes(true);
+			resetModeBool(channel, mode, true);
+		}
+		else if (!mode.compare("-t"))
+		{
+			channel.setTopRes(false);
+			resetModeBool(channel, mode, false);
+		}
+	}
 
 }
 

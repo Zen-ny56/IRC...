@@ -72,4 +72,6 @@ class Server //-> class for server
         std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel);
         void resetModeBool(Channel& channel, std::string mode, bool condition);
 };
-  
+
+bool isNumber(const std::string &str);
+int stringToInt(const std::string &str);

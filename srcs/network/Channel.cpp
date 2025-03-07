@@ -4,7 +4,7 @@ Channel::Channel(){}
 
 Channel::~Channel(){}
 
-Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), priOperator(fd), topic(""), inviteOnly(false), max(INT_MAX)
+Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), priOperator(fd), topic(""), inviteOnly(false), max(INT_MAX), topicRes(false)
 {
 	std::string i = "i"; std::string k = "k"; std::string l = "l"; std::string t = "t"; std::string o = "o";
 	modes[i] = false;
@@ -29,6 +29,7 @@ Channel& Channel::operator=(const Channel& other)
 		this->topic = other.topic;
 		this->inviteOnly = other.inviteOnly;
 		this->max = other.max;
+		this->topicRes = other.topicRes;
 		this->modes = other.modes;
 		this->operFds = other.operFds;
 		this->clientFds = other.clientFds;
@@ -151,3 +152,9 @@ int Channel::isOperator(int fd)
 }
 
 std::vector<int> & Channel::getOperFds(){return this->operFds;}
+
+void Channel::setInviteOnly(bool condition){ this->inviteOnly = condition;}
+
+void Channel::setTopRes(bool condition){ this->topicRes = condition;}
+
+bool Channel::getTopRes(){ return this->topicRes;}

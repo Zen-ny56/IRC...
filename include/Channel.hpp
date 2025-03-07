@@ -13,6 +13,7 @@ class Channel
 		std::string topic;
 		bool inviteOnly;
 		int max;
+		bool topicRes;
 		std::map<std::string, bool> modes;
 		std::vector<int> operFds; // Channel operators fds
 		std::vector<int> clientFds; //Client's fds of who are presently in the channel	
@@ -45,4 +46,8 @@ class Channel
 		std::string getChannelName();
 		void removeOperator(int fd);
 		int	 isOperator(int fd);
+		void setInviteOnly(bool condition);
+		void setTopRes(bool condition);
+		bool getTopRes();
+
 };
