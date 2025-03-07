@@ -106,10 +106,6 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel)
         modeString += "l";
         modeArgs += " " + std::to_string(channel.getMax());
     }
-
-    // If no modes are active, return an empty mode string
-    // if (modeString == "+")
-	// 	 modeString.clear();
     // Format response
 	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
 	return (response);
@@ -154,7 +150,6 @@ void Server::handleMode(int fd, const std::string& message)
 	if (!mode.compare("+o") || !mode.compare("-o"))
 	{
 		iss >> param;
-		std::cout << "=======" << param << "=======" << std::endl;
 		std::map<std::string, int>::iterator it = nicknameMap.find(param);
 		if (it == nicknameMap.end())
 		{
@@ -172,33 +167,43 @@ void Server::handleMode(int fd, const std::string& message)
 		if (!mode.compare("+o"))
 		{
 			channel.addOperator(targetFd);
-			std::string extracted;
-			for (std::string::size_type i = 0; i < mode.length(); i++)
-			{
-				if (std::isalpha(mode[i]))
-					extracted += mode[i];
-			}
-			std::map<std::string, bool>::iterator it = channel.getModes().find(extracted);
-			it->second = true;
 			std::string msg = std::string(GRE) + client.getNickname() + " sets mode +o " + " on " + channel.getChannelName() + "\r\n" + std::string(WHI);
 			channel.broadcastToChannel(msg);
 		}
 		else if (!mode.compare("-o"))
 		{
 			channel.removeOperator(targetFd);
-			std::string extracted;
-			for (std::string::size_type i = 0; i < mode.length(); i++)
-			{
-				if (std::isalpha(mode[i]))
-					extracted += mode[i];
-			}
-			std::map<std::string, bool>::iterator it = channel.getModes().find(extracted);
-			it->second = false;
 			std::string msg = std::string(RED) + client.getNickname() + " sets mode -o " + " on " + channel.getChannelName() + "\r\n" + std::string(WHI);
 			channel.broadcastToChannel(msg);
 		}
 	}
+	else if (!mode.compare("+k") || !mode.compare("-k"))
+	{
+		iss >> param;
+		if (!mode.compare("+k"))
+		{
+			channel.setKey(param);
+			resetModeBool(channel, mode, true);
+		}
+		else if (!mode.compare("-k"))
+		{
+			channel.setKey("");
+			resetModeBool(channel, mode, false);
+		}
+	}
 
+}
+
+void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
+{
+	std::string extracted;
+	for (std::string::size_type i = 0; i < mode.length(); i++)
+	{
+		if (std::isalpha(mode[i]))
+			extracted += mode[i];
+	}
+	std::map<std::string, bool>::iterator it = channel.getModes().find(extracted);
+	it->second = condition;
 }
 
 void Server::processQuit(int fd, const std::string& reason) 
@@ -589,7 +594,7 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	}
 	if (!channel.getKey().empty() && channel.getKey() != key)
 	{
-		std::string errorMsg = std::string(RED) + "475" + client.getNickname() + " :Incorrrect channel key\r\n" + std::string(WHI);
+		std::string errorMsg = std::string(RED) + "475 " + client.getNickname() + " " + channelName + " :Cannot join channel (+k)\r\n" + std::string(WHI);
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 		return;
     }
@@ -671,13 +676,12 @@ void Server::processPrivmsg(int fd, const std::string& message)
     size_t commandEnd = message.find(' ');
     if (commandEnd == std::string::npos || message.substr(0, commandEnd) != "PRIVMSG") {
         std::string error = std::string(RED) + "421: Unknown command\r\n" + std::string(WHI);
-        send(fd, error.c_str(), error.size(), 0); // ERR_UNKNOWNCOMMAND
-        return;
     }
     // Skip the "PRIVMSG" part
     size_t targetStart = commandEnd + 1; // Position after "PRIVMSG "
     size_t spacePos = message.find(' ', targetStart); // Find space after target
-    if (spacePos == std::string::npos) {
+    if (spacePos == std::string::npos)
+	{
         // If there's no space after the target, no message text is provided
         std::string error = std::string(RED) + "411: No recipient given (PRIVMSG)\r\n" + std::string(WHI);
         send(fd, error.c_str(), error.size(), 0); // ERR_NORECIPIENT

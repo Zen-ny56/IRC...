@@ -70,5 +70,6 @@ class Server //-> class for server
         std::string trim(const std::string& str);
         void handleMode(int fd, const std::string& message);
         std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel);
+        void resetModeBool(Channel& channel, std::string mode, bool condition);
 };
   

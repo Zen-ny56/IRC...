@@ -8,7 +8,10 @@ Channel::Channel(const std::string& channelName, const std::string& key, int fd)
 {
 	std::string i = "i"; std::string k = "k"; std::string l = "l"; std::string t = "t"; std::string o = "o";
 	modes[i] = false;
-	modes[k] = false;
+	if (!key.empty())
+		modes[k] = true;
+	else
+		modes[k] = false;
 	modes[l] = false;
 	modes[t] = false;
 	modes[o] = false;
