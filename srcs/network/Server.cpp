@@ -292,81 +292,63 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, 
 
 void Server::handleMode(int fd, const std::string& message)
 {
+	(void)fd;
 	std::istringstream iss(message);
-	std::string command, channelName, token;
-	std::vector<std::string> modeTokens;
-	std::vector<std::string> params;
+    std::string command, channelName, token;
+    std::vector<std::string> modeTokens;
+    std::vector<std::string> params;
 
-	// Read command
+    // Read command
 	iss >> command;
-
 	// Read channel name
 	if (!(iss >> channelName))
 	{
-		// Handle error: no channel name provided
+		std::cerr << "Error: No channel name provided.\n";
 		return;
-	}
+    }
+	// Temporary storage for modes
 	std::string currentModes;
 	bool expectingParam = false;
-	// Process remaining tokens
+	// Parse the modes first
 	while (iss >> token)
 	{
 		if (!token.empty() && (token[0] == '+' || token[0] == '-'))
 		{
+			// Push previous modes (if any) before starting new mode group
 			if (!currentModes.empty())
 			{
 				modeTokens.push_back(currentModes);
 				currentModes.clear();
 			}
+			// Now process the new mode
 			char modeType = token[0];
 			for (size_t i = 1; i < token.size(); ++i)
 			{
 				std::string mode = std::string(1, modeType) + token[i];
 				modeTokens.push_back(mode);
 				if (token[i] == 'k' || token[i] == 'l')
-					expectingParam = true;
-			}
-		} else if (expectingParam) {
-			params.push_back(token);
-			expectingParam = false;
-		} else {
-			modeTokens.push_back(token);
-		}
+                    expectingParam = true;  // Set flag when we expect a parameter
+            }
+        } else if (expectingParam)
+		{
+			// If we're expecting a parameter (after 'k' or 'l' mode), consume the next token
+            params.push_back(token);
+            expectingParam = false; // Reset flag after consuming the parameter
+        } else {
+            // If it's not a mode or expected parameter, push it into params directly
+            params.push_back(token);
+        }
+    }
+	std::cout << "MODES" << std::endl;
+	for (std::vector<std::string>::iterator it = modeTokens.begin(); it != modeTokens.end(); ++it)
+	{
+		std::cout << *it << std::endl;
 	}
-
-    std::cout << "Testing: " << message << std::endl;
-    
-    bool modesCorrect = (modeTokens == expectedModes);
-    bool paramsCorrect = (params == expectedParams);
-
-    std::cout << "Expected Modes: ";
-    std::cout << (modesCorrect ? GRE : RED);
-    for (const auto& mode : expectedModes) std::cout << mode << " ";
-    std::cout << WHI << std::endl;
-
-    std::cout << "Parsed Modes:   ";
-    std::cout << (modesCorrect ? GRE : RED);
-    for (const auto& mode : modeTokens) std::cout << mode << " ";
-    std::cout << WHI << std::endl;
-
-    std::cout << "Expected Params: ";
-    std::cout << (paramsCorrect ? GRE : RED);
-    for (const auto& param : expectedParams) std::cout << param << " ";
-    std::cout << WHI << std::endl;
-
-    std::cout << "Parsed Params:   ";
-    std::cout << (paramsCorrect ? GRE : RED);
-    for (const auto& param : params) std::cout << param << " ";
-    std::cout << WHI << std::endl;
-
-    if (modesCorrect && paramsCorrect)
-        std::cout << GRE << "✅ Test Passed!" << WHI << std::endl;
-    else
-        std::cout << RED << "❌ Test Failed!" << WHI << std::endl;
-
-    std::cout << "-----------------------------\n";
-
-    // for (size_t i = 0; i < modeString.size(); ++i)
+	std::cout << "PARAMS" << std::endl;
+	for (std::vector<std::string>::iterator it = params.begin(); it != params.end(); ++it)
+	{
+		std::cout << *it << std::endl;
+	}
 	// {
 	// 	if (modeString[i] == '+' || modeString[i] == '-')
 	// 		sign = modeString[i];
