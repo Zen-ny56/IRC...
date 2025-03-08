@@ -46,10 +46,8 @@ std::string Channel::getOperatorNick() const
 	for (std::map<int, std::string>::const_iterator it = clientNicknames.begin(); it != clientNicknames.end(); ++it)
 	{
 		int fd = it->first; // File descriptor
-		if (isOperator(fd))
-		{					   // Check if the client is an operator
+		if (isOperator(fd))				   // Check if the client is an operator
 			return it->second; // Return the nickname of the operator
-		}
 	}
 	return ""; // Return an empty string if no operator is found
 }
@@ -57,8 +55,18 @@ std::string Channel::getOperatorNick() const
 void Channel::addClient(int fd)
 {
 	// Step 1: Add the client to the list of clients in the channel
+	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
+	{
+		if (*it == fd)
+		{
+			std::string errMessage = std::string(RED) + " User already exist in channel " + std::string(EN);
+			int bytes =  send(fd, errMessage.c_str(), errMessage.size(), 0);
+			if (bytes == -1)
+				std::cerr << "Error: messages could not be sent." << std::endl;
+			return ;
+		}
+	}
 	clientFds.push_back(fd);
-
 	// Step 2: If it's the first client, assign them as the operator
 	if (clientFds.size() == 1)
 		addOperator(fd); // Automatically make the first client an operator
