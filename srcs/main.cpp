@@ -82,6 +82,18 @@ bool quotes_uneven(const std::string &message) {
 	//This is typically an ERR_NEEDMOREPARAMS (461) or ERR_UNKNOWNCOMMAND (421), depending on the command.
 	//--- Needs to check the code of error.
 
+//Todos:
+// Modify quotes_uneven() to properly reject messages and send errors.
+// Implement process_escaped_quotes() to correctly handle \".
+// Ensure proper error messages (ERR_NEEDMOREPARAMS) are returned to IRSSI.
+// Test the behavior with IRSSI client by sending:
+// Messages with even quotes ✅
+// Messages with odd quotes ❌
+// Messages with escaped quotes (\") ✅
+// This will ensure your ft_irc server correctly handles quotes in line with IRC protocols! 🚀
+
+
+
 int main(int ac, char **av)
 {
     int port;
