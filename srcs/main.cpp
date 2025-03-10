@@ -59,11 +59,41 @@ bool parseArguments(int ac, char **av, int &port, std::string &pass)
 // ./ircserv 1234 ""	Error: Password cannot be empty
 // ./ircserv 6667 pass	---- SERVER ---- (Starts the server)
 
+bool quotes_uneven(const std::string &message) {
+    size_t quotes_count = std::count(message.begin(), message.end(), '\"');
+	bool quotes_even = (quotes_count % 2 == 0);
+
+	if (quotes_even != 0)
+	{
+		std::cout << "Even number of quotes detected in message." << std::endl;
+		return (0);
+	}
+	else 
+	{
+		std::cout << "Odd number of quotes detected in message." << std::endl;
+		return (1);
+	}
+}
+// Return Type:
+//returns 0 if the quote count is even
+//returns 1 if the quote count is not even
+
+//Uneven Quotes trigger an error response, preventing exectuion of message
+	//This is typically an ERR_NEEDMOREPARAMS (461) or ERR_UNKNOWNCOMMAND (421), depending on the command.
+	//--- Needs to check the code of error.
+
 int main(int ac, char **av)
 {
     int port;
     std::string pass;
-    
+
+	std::cout << "TESTING MODE" << std::endl;
+	if (!quotes_uneven("Hello\"")){
+    // send_error(client_fd, "Missing quote detected in message.");
+	}
+	return (0);
+    //-------------
+
     if (!parseArguments(ac, av, port, pass))
         return 1;
 
