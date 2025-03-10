@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <queue>
 #include <vector> //-> for vector
 #include <sys/socket.h> //-> for socket()
 #include <sys/types.h> //-> for socket()
@@ -72,6 +73,8 @@ class Server //-> class for server
         std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel, int fd);
         void resetModeBool(Channel& channel, std::string mode, bool condition);
         void parseMode(const std::string& message);
+        void executeMode(std::string channelName, std::vector<std::string>& modeTokens, std::vector<std::string>& params, int fd);
+
 };
 
 bool isNumber(const std::string &str);

@@ -294,68 +294,86 @@ void Server::handleMode(int fd, const std::string& message)
 {
 	(void)fd;
 	std::istringstream iss(message);
-    std::string command, channelName, token;
-    std::vector<std::string> modeTokens;
-    std::vector<std::string> params;
+	std::string command, channelName, token;
+	std::map<std::string, std::string> modeMap; // Store mode-parameter pairs
+	std::vector<std::string> modeOrder; // Keep track of order of modes needing parameters
 
-    // Read command
+	// Read command
 	iss >> command;
+
 	// Read channel name
-	if (!(iss >> channelName))
-	{
+	if (!(iss >> channelName)) {
 		std::cerr << "Error: No channel name provided.\n";
 		return;
-    }
-	// Temporary storage for modes
-	std::string currentModes;
+	}
+
+	std::queue<std::string> pendingParams;
 	bool expectingParam = false;
-	// Parse the modes first
-	while (iss >> token)
-	{
-		if (!token.empty() && (token[0] == '+' || token[0] == '-'))
-		{
-			// Push previous modes (if any) before starting new mode group
-			if (!currentModes.empty())
-			{
-				modeTokens.push_back(currentModes);
-				currentModes.clear();
-			}
-			// Now process the new mode
+	std::string lastMode;
+
+	// Process input
+	while (iss >> token) {
+		if (!token.empty() && (token[0] == '+' || token[0] == '-')) {
+			// New mode group detected, process each mode separately
+			expectingParam = false; // Reset because a new mode group starts
 			char modeType = token[0];
-			for (size_t i = 1; i < token.size(); ++i)
-			{
+
+			for (size_t i = 1; i < token.size(); ++i) {
 				std::string mode = std::string(1, modeType) + token[i];
-				modeTokens.push_back(mode);
-				if (token[i] == 'k' || token[i] == 'l')
-                    expectingParam = true;  // Set flag when we expect a parameter
-            }
-        } else if (expectingParam)
+
+				// If mode is 'i' or 't', it never takes a parameter
+				if (token[i] == 'i' || token[i] == 't') {
+					modeMap[mode] = ""; // Ensure empty parameter
+				} else {
+					modeMap[mode] = ""; // Initialize mode
+					modeOrder.push_back(mode); // Store the order
+					lastMode = mode;
+					expectingParam = true; // Expect parameter for this mode
+				}
+			}
+		} else {
+			if (expectingParam) {
+				// Assign parameter to last mode if expected
+				modeMap[lastMode] = token;
+				expectingParam = false;
+			} else {
+				// Store unexpected token
+				pendingParams.push(token);
+			}
+		}
+	}
+
+	// **Assign Remaining Parameters in Order**
+	for (std::vector<std::string>::iterator it = modeOrder.begin(); it != modeOrder.end(); ++it) {
+		if (modeMap[*it].empty() && !pendingParams.empty()) {
+			modeMap[*it] = pendingParams.front();
+			pendingParams.pop();
+		}
+	}
+
+	// **Flag any remaining unexpected tokens**
+	while (!pendingParams.empty()) {
+		std::cerr << "Warning: Unexpected token '" << pendingParams.front() << "'\n";
+		pendingParams.pop();
+	}
+
+	// **Final Check:** Ensure 'i' and 't' have no parameters
+	for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it) {
+		if (it->first == "+i" || it->first == "+t") {
+			it->second = ""; // Forcefully clear any assigned parameter
+		}
+	}
+		// Debug Output
+		std::cout << "MODE MAP:\n";
+		for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it)
 		{
-			// If we're expecting a parameter (after 'k' or 'l' mode), consume the next token
-            params.push_back(token);
-            expectingParam = false; // Reset flag after consuming the parameter
-        } else {
-            // If it's not a mode or expected parameter, push it into params directly
-            params.push_back(token);
-        }
-    }
-	std::cout << "MODES" << std::endl;
-	for (std::vector<std::string>::iterator it = modeTokens.begin(); it != modeTokens.end(); ++it)
-	{
-		std::cout << *it << std::endl;
-	}
-	std::cout << "PARAMS" << std::endl;
-	for (std::vector<std::string>::iterator it = params.begin(); it != params.end(); ++it)
-	{
-		std::cout << *it << std::endl;
-	}
-	// {
-	// 	if (modeString[i] == '+' || modeString[i] == '-')
-	// 		sign = modeString[i];
-	// 	else
-	// 	{
-	// 		if (sign == '\0')
-	// 			continue;
+			std::cout << it->first << " -> " << (it->second.empty() ? "(no param)" : it->second) << std::endl;
+		}
+// Execute mode with the new format
+// executeMode(channelName, modeMap, fd);
+
+	// Execute mode with the new format
+	// executeMode(channelName, modeMap, fd);
 	// 		switch (modeString[i])
 	// 		{
 	// 			case 'o': {
@@ -401,6 +419,77 @@ void Server::handleMode(int fd, const std::string& message)
     // }
 }
 
+// void Server::executeMode(std::string channelName, std::vector<std::string>& modeTokens, std::vector<std::string>& params, int fd)
+// {
+// 	//Retreive Client
+// 	std::vector<Client>::iterator it = getClient(fd);
+// 	if (it == clients.end())
+// 		throw std::runtime_error("Client was not found]\n");
+// 	Client& client = (*this)[it];
+// 	//Retrieve Channel
+// 	std::map<std::string, Channel>::iterator bt = channels.find(channelName);
+// 	if (bt == channels.end())
+// 	{
+// 		std::string msg = std::string(RED) + "403 " + client.getNickname() + " " + channelName + " :No such channel" + std::string(WHI);
+// 		send(fd, msg.c_str(), msg.size(), 0);
+// 		return;
+//  	}
+// 	Channel& channel = bt->second;
+
+// 	//Switch statements
+// 	for (std::vector<std::string>::iterator ct = modeTokens.begin(); ct != modeTokens.end(); ++ct)
+// 	{
+// 		std::string temp = *ct;
+// 		char sign = temp[0];
+// 		char letter = temp[1];
+// 		if (sign == '-')
+// 		{
+// 			switch (letter)
+// 			{
+// 				case 'k':
+// 				{
+// 					channel.setKey("");
+// 					resetModeBool(channel, temp, false);
+// 					std::string msg = std::string(RED) + client.getNickname() + " sets mode -k " + " on " + channel.getChannelName() + "\r\n" + std::string(WHI);
+// 					channel.broadcastToChannel(msg);
+// 				}
+// 				case 'o':
+// 				{
+// 					std::map<std::string, int>::iterator dt = nicknameMap.find(param);
+// 					if (dt == nicknameMap.end())
+// 					{
+// 						std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
+// 						send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+// 						return;
+// 					}
+// 					int targetFd = dt->second;
+// 					if (!channel.isInChannel(targetFd))
+// 					{
+// 						std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
+// 						send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+// 						return;
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// 		std::string parameter;
+// 		std::vector<std::string>::iterator dt;
+// 		if (!temp.compare("+l") || !temp.compare("-l") || !temp.compare("+k") || !temp.compare("-k"))
+// 		{
+// 			for (dt = params.begin(); dt != params.end(); ++dt)
+// 			{
+// 				parameter = *dt;
+// 			}
+// 			if (dt == params.end())
+// 			{
+// 				std::string errorMsg = std::string(RED) + ":ircserv  696 " + client.getNickname() + " " + channel.getChannelName() + " " + ct[1] + " " + *dt + " :Invalid mode parameter\r\n";
+// 				send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+// 			}
+			
+// 		}
+// 	}
+// }
 
 void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
 {
