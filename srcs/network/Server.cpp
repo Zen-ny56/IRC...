@@ -290,41 +290,35 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, 
 
 // }
 
-void Server::handleMode(int fd, const std::string& message)
+std::map<std::string, std::string>*  Server::parseMode(const std::string& message)
 {
-	(void)fd;
 	std::istringstream iss(message);
 	std::string command, channelName, token;
 	std::map<std::string, std::string> modeMap; // Store mode-parameter pairs
 	std::vector<std::string> modeOrder; // Keep track of order of modes needing parameters
 
 	// Read command
-	iss >> command;
-
-	// Read channel name
-	if (!(iss >> channelName)) {
-		std::cerr << "Error: No channel name provided.\n";
-		return;
-	}
-
 	std::queue<std::string> pendingParams;
 	bool expectingParam = false;
 	std::string lastMode;
 
+	iss >> command;
+	iss >> channelName;
 	// Process input
-	while (iss >> token) {
-		if (!token.empty() && (token[0] == '+' || token[0] == '-')) {
+	while (iss >> token)
+	{
+		if (!token.empty() && (token[0] == '+' || token[0] == '-'))
+		{
 			// New mode group detected, process each mode separately
 			expectingParam = false; // Reset because a new mode group starts
 			char modeType = token[0];
-
-			for (size_t i = 1; i < token.size(); ++i) {
+			for (size_t i = 1; i < token.size(); ++i)
+			{
 				std::string mode = std::string(1, modeType) + token[i];
-
 				// If mode is 'i' or 't', it never takes a parameter
-				if (token[i] == 'i' || token[i] == 't') {
+				if (token[i] == 'i' || token[i] == 't')
 					modeMap[mode] = ""; // Ensure empty parameter
-				} else {
+				else {
 					modeMap[mode] = ""; // Initialize mode
 					modeOrder.push_back(mode); // Store the order
 					lastMode = mode;
@@ -342,154 +336,67 @@ void Server::handleMode(int fd, const std::string& message)
 			}
 		}
 	}
-
 	// **Assign Remaining Parameters in Order**
-	for (std::vector<std::string>::iterator it = modeOrder.begin(); it != modeOrder.end(); ++it) {
+	for (std::vector<std::string>::iterator it = modeOrder.begin(); it != modeOrder.end(); ++it)
+	{
 		if (modeMap[*it].empty() && !pendingParams.empty()) {
 			modeMap[*it] = pendingParams.front();
 			pendingParams.pop();
 		}
 	}
-
 	// **Flag any remaining unexpected tokens**
-	while (!pendingParams.empty()) {
+	while (!pendingParams.empty())
+	{
 		std::cerr << "Warning: Unexpected token '" << pendingParams.front() << "'\n";
 		pendingParams.pop();
 	}
-
 	// **Final Check:** Ensure 'i' and 't' have no parameters
 	for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it) {
 		if (it->first == "+i" || it->first == "+t") {
 			it->second = ""; // Forcefully clear any assigned parameter
 		}
 	}
-		// Debug Output
-		std::cout << "MODE MAP:\n";
-		for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it)
-		{
-			std::cout << it->first << " -> " << (it->second.empty() ? "(no param)" : it->second) << std::endl;
-		}
-// Execute mode with the new format
-// executeMode(channelName, modeMap, fd);
-
-	// Execute mode with the new format
-	// executeMode(channelName, modeMap, fd);
-	// 		switch (modeString[i])
-	// 		{
-	// 			case 'o': {
-    //                 if (paramIndex >= params.size()) break;
-    //                 std::string target = params[paramIndex++];
-    //                 int targetFd = getClientFdByNickname(target);
-    //                 if (targetFd == -1 || !channel.isInChannel(targetFd)) {
-    //                     sendError(fd, ":ircserv 441 " + getClient(fd)->getNickname() + " " + channelName + " :They aren't on the channel");
-    //                     break;
-    //                 }
-    //                 if (sign == '+') channel.addOperator(targetFd);
-    //                 else channel.removeOperator(targetFd);
-    //                 break;
-    //             }
-    //             case 'k': {
-    //                 if (paramIndex >= params.size()) break;
-    //                 if (!channel.isOperator(fd)) {
-    //                     sendError(fd, ":ircserv 482 " + getClient(fd)->getNickname() + " " + channelName + " :You're not a channel operator");
-    //                     break;
-    //                 }
-    //                 channel.setKey(sign == '+' ? params[paramIndex++] : "");
-    //                 break;
-    //             }
-    //             case 'l': {
-    //                 if (sign == '+' && paramIndex < params.size()) {
-    //                     channel.setMax(std::stoi(params[paramIndex++]));
-    //                 } else {
-    //                     channel.setMax(INT_MAX);
-    //                 }
-    //                 break;
-    //             }
-    //             case 'i':
-    //                 channel.setInviteOnly(sign == '+');
-    //                 break;
-    //             case 't':
-    //                 channel.setTopRes(sign == '+');
-    //                 break;
-    //             default:
-    //                 sendError(fd, ":ircserv 472 " + getClient(fd)->getNickname() + " " + modeString[i] + " :Unknown mode");
-    //                 break;
-    //         }
-    //     }
-    // }
+	// Debug Output
+	std::cout << "MODE MAP:\n";
+	for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it)
+	{
+		std::cout << it->first << " -> " << (it->second.empty() ? "(no param)" : it->second) << std::endl;
+	}
+	std::map<std::string, std::string>* returnedMap = new std::map<std::string, std::string>(modeMap); // Allocate and copy the content of modeMap
+	return (returnedMap);
 }
 
-// void Server::executeMode(std::string channelName, std::vector<std::string>& modeTokens, std::vector<std::string>& params, int fd)
-// {
-// 	//Retreive Client
-// 	std::vector<Client>::iterator it = getClient(fd);
-// 	if (it == clients.end())
-// 		throw std::runtime_error("Client was not found]\n");
-// 	Client& client = (*this)[it];
-// 	//Retrieve Channel
-// 	std::map<std::string, Channel>::iterator bt = channels.find(channelName);
-// 	if (bt == channels.end())
-// 	{
-// 		std::string msg = std::string(RED) + "403 " + client.getNickname() + " " + channelName + " :No such channel" + std::string(WHI);
-// 		send(fd, msg.c_str(), msg.size(), 0);
-// 		return;
-//  	}
-// 	Channel& channel = bt->second;
+void Server::handleMode(int fd, const std::string& message)
+{
+	std::istringstream iss(message);
+	std::string command, channelName;
+	std::map<std::string, std::string> modes = (*parseMode(message));
+	executeMode(channelName , modes, fd);
 
-// 	//Switch statements
-// 	for (std::vector<std::string>::iterator ct = modeTokens.begin(); ct != modeTokens.end(); ++ct)
-// 	{
-// 		std::string temp = *ct;
-// 		char sign = temp[0];
-// 		char letter = temp[1];
-// 		if (sign == '-')
-// 		{
-// 			switch (letter)
-// 			{
-// 				case 'k':
-// 				{
-// 					channel.setKey("");
-// 					resetModeBool(channel, temp, false);
-// 					std::string msg = std::string(RED) + client.getNickname() + " sets mode -k " + " on " + channel.getChannelName() + "\r\n" + std::string(WHI);
-// 					channel.broadcastToChannel(msg);
-// 				}
-// 				case 'o':
-// 				{
-// 					std::map<std::string, int>::iterator dt = nicknameMap.find(param);
-// 					if (dt == nicknameMap.end())
-// 					{
-// 						std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
-// 						send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-// 						return;
-// 					}
-// 					int targetFd = dt->second;
-// 					if (!channel.isInChannel(targetFd))
-// 					{
-// 						std::string errorMsg = std::string(RED) + ":ircserv 441 " + client.getNickname() + " " + channel.getChannelName() + " :They aren't on the channel\r\n";
-// 						send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-// 						return;
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// 		std::string parameter;
-// 		std::vector<std::string>::iterator dt;
-// 		if (!temp.compare("+l") || !temp.compare("-l") || !temp.compare("+k") || !temp.compare("-k"))
-// 		{
-// 			for (dt = params.begin(); dt != params.end(); ++dt)
-// 			{
-// 				parameter = *dt;
-// 			}
-// 			if (dt == params.end())
-// 			{
-// 				std::string errorMsg = std::string(RED) + ":ircserv  696 " + client.getNickname() + " " + channel.getChannelName() + " " + ct[1] + " " + *dt + " :Invalid mode parameter\r\n";
-// 				send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-// 			}
-			
-// 		}
-// 	}
-// }
+
+}
+
+void Server::executeMode(std::string channelName, std::map<std::string, std::string>& modeMap, int fd)
+{
+	//Retreive Client
+	std::vector<Client>::iterator it = getClient(fd);
+	if (it == clients.end())
+		throw std::runtime_error("Client was not found]\n");
+	Client& client = (*this)[it];
+	//Retrieve Channel
+	std::map<std::string, Channel>::iterator bt = channels.find(channelName);
+	if (bt == channels.end())
+	{
+		std::string msg = std::string(RED) + "403 " + client.getNickname() + " " + channelName + " :No such channel" + std::string(WHI);
+		send(fd, msg.c_str(), msg.size(), 0);
+		return;
+ 	}
+	Channel& channel = bt->second;
+	(void)channel;
+	(void)modeMap;
+	//Switch statements
+	
+}
 
 void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
 {

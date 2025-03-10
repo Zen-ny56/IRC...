@@ -1,0 +1,1 @@
+MODE #testroom +tlk Restricted 1234 Key
