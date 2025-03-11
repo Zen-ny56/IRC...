@@ -299,6 +299,7 @@ std::map<std::string, std::string>*  Server::parseMode(const std::string& messag
 	std::stack<std::string> params; // Keep track of order of modes needing parameters
 	std::stack<std::string> falseParams;
 	bool orderAfterOperator = false;
+	int k = 0;
 
 	// Read command
 	iss >> command;
@@ -309,14 +310,15 @@ std::map<std::string, std::string>*  Server::parseMode(const std::string& messag
 	{
 		if (!token.empty() && (token[0] == '+' || token[0] == '-'))
 		{
-			orderAfterOperator = true;
 			// New mode group detected, process each mode separately
 			for (size_t i = 1; i < token.size(); ++i)
 			{
 				if (token[i] == '+' && token[0] == '+') // Ignore duplicates 
             		continue;
         		if ((token[i] == '-' && token[i - 1] == '+') || (token[i] == '+' && token[i - 1] == '-'))// Ignore alternating "+-" patterns (e.g., "+-i" or "-+o")
+				{
             		continue;  // Skip ineffective mode
+				}
 				if (token[i] == 'i' || token[i] == 't') // If mode is 'i' or 't', it never takes a parameter
 				{
             		type = std::string(1, token[0]) + token[i];
@@ -324,8 +326,10 @@ std::map<std::string, std::string>*  Server::parseMode(const std::string& messag
 				}
 				else if (token[i] == 'l' || token[i] == 'o' || token[i] == 'k')
 				{
+							orderAfterOperator = true;
 					if (token[0] == '-' && token[i] == 'k')
 					{
+
           				type = std::string(1, token[0]) + token[i];
 						modeMap[type] = "";
 					}
@@ -333,6 +337,7 @@ std::map<std::string, std::string>*  Server::parseMode(const std::string& messag
 					{
 					    type = std::string(1, token[0]) + token[i];
 						modeWitPams.push(type);
+						k++;
 					}
 				}
 				
@@ -349,46 +354,34 @@ std::map<std::string, std::string>*  Server::parseMode(const std::string& messag
 			falseParams.push(type);
 		}
 	}
-	std::cout << RED << "False parameters:\n";
-   	std::stack<std::string> temp = falseParams;
-    while (!temp.empty())
-	{
-        std::cout << temp.top() << " ";
-        temp.pop();
-    }
-	std::cout << "\n";
-	std::cout << GRE << "Before reverse rotating once Modes that need parameters:\n";
-   	std::stack<std::string> temp1 = modeWitPams;
-    while (!temp1.empty())
-	{
-        std::cout << temp1.top() << " ";
-        temp1.pop();
-    }
-    std::cout << "\n";
-	std::cout << GRE << "Before reverse rotating once Parameters themselves:\n";
-	std::stack<std::string> temp2 = params;
-    while (!temp2.empty())
-	{
-		std::cout << temp2.top() << " ";
-        temp2.pop();
-    }
-    std::cout << "\n\n";
 	// Debug Output
-	
-	reverseRotate(params);
-	std::cout << GRE << "After reverse rotating once Parameters themselves:\n";
-	temp2 = params;
-    while (!temp2.empty())
+	//
+	int j = k;
+	while (k-- > 1)
+		reverseRotate(modeWitPams);
+	while (j-- > 1)
+		reverseRotate(params);
+	while (!modeWitPams.empty() && !params.empty())
 	{
-		std::cout << temp2.top() << " ";
-        temp2.pop();
-    }
-    std::cout << "\n";
-	std::cout << "MODE MAP:\n";
-	for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it)
-	{
-		std::cout << it->first << " -> " << (it->second.empty() ? "(no param)" : it->second) << std::endl;
+		std::string bojo = modeWitPams.top(); modeWitPams.pop();
+		std::string yoyo = params.top(); params.pop();
+		modeMap[bojo] = yoyo;
 	}
+	if (!params.empty())
+	{
+		std::string extraf = params.top(); params.pop(); 
+		falseParams.push(extraf);
+	}
+	if (!modeWitPams.empty())
+	{
+		std::string emptyPam = modeWitPams.top(); modeWitPams.pop();
+		modeMap[emptyPam] = "";
+	}
+	// std::cout << "\n\nMODE MAP:\n";
+	// for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it)
+	// {
+	// 	std::cout << it->first << " -> " << (it->second.empty() ? "(no param)" : it->second) << std::endl;
+	// }
 	std::map<std::string, std::string>* returnedMap = new std::map<std::string, std::string>(modeMap); // Allocate and copy the content of modeMap
 	return (returnedMap);
 }
