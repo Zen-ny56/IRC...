@@ -92,7 +92,8 @@ bool quotes_uneven(const std::string &message) {
 // Messages with escaped quotes (\") ✅
 // This will ensure your ft_irc server correctly handles quotes in line with IRC protocols! 🚀
 
-
+// Note looking through PRIVMSG, NOTICE, TOPIC and other commands
+// to see their interaction with ":" and if it makes a noteable differnce
 
 int main(int ac, char **av)
 {
