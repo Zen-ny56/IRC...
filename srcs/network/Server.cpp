@@ -295,68 +295,95 @@ std::map<std::string, std::string>*  Server::parseMode(const std::string& messag
 	std::istringstream iss(message);
 	std::string command, channelName, token;
 	std::map<std::string, std::string> modeMap; // Store mode-parameter pairs
-	std::vector<std::string> modeOrder; // Keep track of order of modes needing parameters
+	std::stack<std::string> modeWitPams;
+	std::stack<std::string> params; // Keep track of order of modes needing parameters
+	std::stack<std::string> falseParams;
+	bool orderAfterOperator = false;
 
 	// Read command
-	std::queue<std::string> pendingParams;
-	bool expectingParam = false;
-	std::string lastMode;
-
 	iss >> command;
 	iss >> channelName;
 	// Process input
+	std::string type;
 	while (iss >> token)
 	{
 		if (!token.empty() && (token[0] == '+' || token[0] == '-'))
 		{
+			orderAfterOperator = true;
 			// New mode group detected, process each mode separately
-			expectingParam = false; // Reset because a new mode group starts
-			char modeType = token[0];
 			for (size_t i = 1; i < token.size(); ++i)
 			{
-				std::string mode = std::string(1, modeType) + token[i];
-				// If mode is 'i' or 't', it never takes a parameter
-				if (token[i] == 'i' || token[i] == 't')
-					modeMap[mode] = ""; // Ensure empty parameter
-				else {
-					modeMap[mode] = ""; // Initialize mode
-					modeOrder.push_back(mode); // Store the order
-					lastMode = mode;
-					expectingParam = true; // Expect parameter for this mode
+				if (token[i] == '+' && token[0] == '+') // Ignore duplicates 
+            		continue;
+        		if ((token[i] == '-' && token[i - 1] == '+') || (token[i] == '+' && token[i - 1] == '-'))// Ignore alternating "+-" patterns (e.g., "+-i" or "-+o")
+            		continue;  // Skip ineffective mode
+				if (token[i] == 'i' || token[i] == 't') // If mode is 'i' or 't', it never takes a parameter
+				{
+            		type = std::string(1, token[0]) + token[i];
+					modeMap[type] = ""; // Ensure empty parameter
 				}
+				else if (token[i] == 'l' || token[i] == 'o' || token[i] == 'k')
+				{
+					if (token[0] == '-' && token[i] == 'k')
+					{
+          				type = std::string(1, token[0]) + token[i];
+						modeMap[type] = "";
+					}
+					else
+					{
+					    type = std::string(1, token[0]) + token[i];
+						modeWitPams.push(type);
+					}
+				}
+				
 			}
-		} else {
-			if (expectingParam) {
-				// Assign parameter to last mode if expected
-				modeMap[lastMode] = token;
-				expectingParam = false;
-			} else {
-				// Store unexpected token
-				pendingParams.push(token);
-			}
+		}
+		else if (!token.empty() && orderAfterOperator == true)
+		{
+			type = token;
+			params.push(type);
+		}
+		else
+		{
+			type = token;
+			falseParams.push(type);
 		}
 	}
-	// **Assign Remaining Parameters in Order**
-	for (std::vector<std::string>::iterator it = modeOrder.begin(); it != modeOrder.end(); ++it)
+	std::cout << RED << "False parameters:\n";
+   	std::stack<std::string> temp = falseParams;
+    while (!temp.empty())
 	{
-		if (modeMap[*it].empty() && !pendingParams.empty()) {
-			modeMap[*it] = pendingParams.front();
-			pendingParams.pop();
-		}
-	}
-	// **Flag any remaining unexpected tokens**
-	while (!pendingParams.empty())
+        std::cout << temp.top() << " ";
+        temp.pop();
+    }
+	std::cout << "\n";
+	std::cout << GRE << "Before reverse rotating once Modes that need parameters:\n";
+   	std::stack<std::string> temp1 = modeWitPams;
+    while (!temp1.empty())
 	{
-		std::cerr << "Warning: Unexpected token '" << pendingParams.front() << "'\n";
-		pendingParams.pop();
-	}
-	// **Final Check:** Ensure 'i' and 't' have no parameters
-	for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it) {
-		if (it->first == "+i" || it->first == "+t") {
-			it->second = ""; // Forcefully clear any assigned parameter
-		}
-	}
+        std::cout << temp1.top() << " ";
+        temp1.pop();
+    }
+    std::cout << "\n";
+	std::cout << GRE << "Before reverse rotating once Parameters themselves:\n";
+	std::stack<std::string> temp2 = params;
+    while (!temp2.empty())
+	{
+		std::cout << temp2.top() << " ";
+        temp2.pop();
+    }
+    std::cout << "\n\n";
 	// Debug Output
+	
+	reverseRotate(params);
+	std::cout << GRE << "After reverse rotating once Parameters themselves:\n";
+	temp2 = params;
+    while (!temp2.empty())
+	{
+		std::cout << temp2.top() << " ";
+        temp2.pop();
+    }
+    std::cout << "\n";
 	std::cout << "MODE MAP:\n";
 	for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it)
 	{
@@ -372,8 +399,30 @@ void Server::handleMode(int fd, const std::string& message)
 	std::string command, channelName;
 	std::map<std::string, std::string> modes = (*parseMode(message));
 	executeMode(channelName , modes, fd);
+}
 
-
+void Server::reverseRotate(std::stack<std::string>& s)
+{
+	if (s.empty() || s.size() == 1)
+		return; // Nothing to rotate if stack has 0 or 1 element
+    std::queue<std::string> tempQueue;
+    // Step 1: Move all elements except the last one to a queue
+    while (s.size() > 1)
+	{
+		tempQueue.push(s.top());
+		s.pop();
+    }
+	// Step 2: The last remaining element is the bottom-most element
+	std::string bottomElement = s.top();
+	s.pop();
+	// Step 3: Restore the elements back to the stack in original order
+	while (!tempQueue.empty())
+	{
+		s.push(tempQueue.front());
+		tempQueue.pop();
+	}
+	// Step 4: Push the bottom-most element to the top
+	s.push(bottomElement);
 }
 
 void Server::executeMode(std::string channelName, std::map<std::string, std::string>& modeMap, int fd)

@@ -1,1 +1,3 @@
 MODE #testroom +tlk Restricted 1234 Key
+
+1) Put parameters in std::stack , use top 

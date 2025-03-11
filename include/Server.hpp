@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <stack>
 #include <queue>
 #include <vector> //-> for vector
 #include <sys/socket.h> //-> for socket()
@@ -75,6 +76,8 @@ class Server //-> class for server
         void resetModeBool(Channel& channel, std::string mode, bool condition);
         void executeMode(std::string channelName, std::map<std::string, std::string>& modeMap, int fd);
         std::map<std::string, std::string>* parseMode(const std::string& message);
+        void reverseRotate(std::stack<std::string>& s);
+
 };
 
 bool isNumber(const std::string &str);
