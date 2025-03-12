@@ -23,6 +23,7 @@
 #define WHI "\e[0;37m" //-> for white color
 #define GRE "\e[1;32m" //-> for green color
 #define YEL "\e[1;33m" //-> for yellow color
+#define EN "\e[0m" //-> reset to default color
 
 class Client;
 class Channel;
@@ -79,3 +80,8 @@ class Server //-> class for server
 
 bool isNumber(const std::string &str);
 int stringToInt(const std::string &str);
+
+//Created a function globally function to Handle quotes to check for parsing " "
+		// -check how it works with refernce client, in different cases
+		// of error handling, e.g what if one quote is missing
+
