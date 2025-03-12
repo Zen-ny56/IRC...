@@ -1001,7 +1001,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		std::map<std::string, Channel>::iterator it = channels.find(target);
 		if (it == channels.end())
 		{
-			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
+			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI) + EN; //One of the WHI colors isnt being reset
 			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
 			return;
 		}
@@ -1009,7 +1009,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		Channel& channel = it->second;
 		if (!channel.isInChannel(fd) || channel.isBanned(sender.getNickname()))
 		{
-			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
+			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI) + EN; //checking if adding EN will remove white color
 			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
 			return;
 		}
@@ -1022,7 +1022,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		std::vector<Client>::iterator ct = getClientUsingNickname(target);
 		if (ct == clients.end())
 		{
-			std::string error = std::string(RED) + "401: No such nickname " + target + "\r\n" + std::string(WHI);
+			std::string error = std::string(RED) + "401: No such nickname " + target + "\r\n" + std::string(WHI) + EN;// added EN to remove white color after error message appears
             send(fd, error.c_str(), error.size(), 0); // ERR_NOSUCHNICK
 			return ;
 		}

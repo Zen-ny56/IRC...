@@ -100,11 +100,11 @@ int main(int ac, char **av)
     int port;
     std::string pass;
 
-	std::cout << "TESTING MODE" << std::endl;
-	if (!quotes_uneven("Hello\"")){
-    // send_error(client_fd, "Missing quote detected in message.");
-	}
-	return (0);
+	// std::cout << "TESTING MODE of quotes" << std::endl;
+	// if (!quotes_uneven("Hello\"")){
+    // // send_error(client_fd, "Missing quote detected in message.");
+	// }
+	// return (0);
     //-------------
 
     if (!parseArguments(ac, av, port, pass))
