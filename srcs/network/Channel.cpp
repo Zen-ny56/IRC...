@@ -4,19 +4,34 @@ Channel::Channel(){}
 
 Channel::~Channel(){}
 
-Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), priOperator(fd), topic(""), inviteOnly(false), max(INT_MAX){}
+Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), priOperator(fd), topic(""), inviteOnly(false), max(INT_MAX), topicRes(false)
+{
+	std::string i = "i"; std::string k = "k"; std::string l = "l"; std::string t = "t"; std::string o = "o";
+	modes[i] = false;
+	if (!key.empty())
+		modes[k] = true;
+	else
+		modes[k] = false;
+	modes[l] = false;
+	modes[t] = false;
+	modes[o] = false;
+	addOperator(fd);
+}
 
 Channel& Channel::operator=(const Channel& other)
 {
 	if (this != &other)
 	{
 		// Assign each member variable
-		// this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
+		this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
 		this->key = other.key;                 // key is also const and cannot be reassigned
 		this->priOperator = other.priOperator;
 		this->topic = other.topic;
 		this->inviteOnly = other.inviteOnly;
 		this->max = other.max;
+		this->topicRes = other.topicRes;
+		this->modes = other.modes;
+		this->operFds = other.operFds;
 		this->clientFds = other.clientFds;
 		this->_isInvited = other._isInvited;
 		this->_isBanned = other._isBanned;
@@ -27,6 +42,18 @@ Channel& Channel::operator=(const Channel& other)
 void Channel::addClient(int fd)
 {
 	clientFds.push_back(fd);
+}
+
+void Channel::addOperator(int fd)
+{
+	operFds.push_back(fd);
+}
+
+void Channel::removeOperator(int fd)
+{
+	std::vector<int>::iterator it = std::find(operFds.begin(), operFds.end(), fd);
+	if (it != operFds.end())// If foundoper
+		operFds.erase(it);    // Remove from the vector
 }
 
 void Channel::setKey(const std::string& key){this->key = key;}
@@ -107,3 +134,27 @@ std::vector<int> Channel::listUsers()
 }
 
 int Channel::getPriOperator(){return this->priOperator;}
+
+std::map<std::string, bool> & Channel::getModes(){return this->modes;}
+
+std::string Channel::getChannelName(){ 	std::cout << channelName << std::endl;
+return this->channelName;}
+
+int Channel::isOperator(int fd)
+{
+	for (std::vector<int>::iterator it = operFds.begin(); it != operFds.end(); ++it)
+	{
+		std::cout << "Going through the loop" <<  *it << std::endl;
+		if (*it == fd)
+			return (1);
+	}
+	return (0);
+}
+
+std::vector<int> & Channel::getOperFds(){return this->operFds;}
+
+void Channel::setInviteOnly(bool condition){ this->inviteOnly = condition;}
+
+void Channel::setTopRes(bool condition){ this->topicRes = condition;}
+
+bool Channel::getTopRes(){ return this->topicRes;}

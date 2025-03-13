@@ -70,14 +70,209 @@ void Server::receiveNewData(int fd)
 			processSasl(fd, message);
 		else if (message.find("CAP END") != std::string::npos)
 			capEnd(fd);
-		// else if (message.find("MODE") != std::string::npos)
-		// 	handleMode(fd, message);
+		else if (message.find("MODE") != std::string::npos)
+			handleMode(fd, message);
 		else
 			std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
 	}
 }
 
-// void Server::handleMode(int fd, const std::string& me)
+std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, int fd)
+{
+	std::string modeString = "+";
+	std::string modeArgs;
+	std::vector<int> operators = channel.getOperFds();
+	std::map<std::string, bool> modes = channel.getModes();
+	// Check which modes are active in the channel
+	if (modes.find("i") != modes.end() && modes.at("i"))
+		modeString += "i";
+	if (modes.find("t") != modes.end() && modes.at("t"))
+		modeString += "t";
+	if (modes.find("k") != modes.end() && modes.at("k") && channel.isOperator(fd))
+	{
+		modeString += "k";
+		modeArgs += " " + channel.getKey();
+	}
+	if (modes.find("o") != modes.end())
+	{
+		for (std::vector<int>::iterator it = operators.begin(); it != operators.end(); ++it)
+		{
+			modeString += "o";
+			break;
+		}
+	}
+	if (modes.find("l") != modes.end() && modes.at("l"))
+	{
+		modeString += "l";
+		modeArgs += " " + std::to_string(channel.getMax());
+	}
+	// Format response
+	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
+	return (response);
+}
+
+std::map<std::string, std::string>*  Server::parseMode(const std::string& message)
+{
+	std::istringstream iss(message);
+	std::string command, channelName, token;
+	std::map<std::string, std::string> modeMap; // Store mode-parameter pairs
+	std::stack<std::string> modeWitPams;
+	std::stack<std::string> params; // Keep track of order of modes needing parameters
+	std::stack<std::string> falseParams;
+	bool orderAfterOperator = false;
+	int k = 0;
+
+	// Read command
+	iss >> command;
+	iss >> channelName;
+	// Process input
+	std::string type;
+	while (iss >> token)
+	{
+		if (!token.empty() && (token[0] == '+' || token[0] == '-'))
+		{
+			// New mode group detected, process each mode separately
+			for (size_t i = 1; i < token.size(); ++i)
+			{
+				if (token[i] == '+' && token[0] == '+') // Ignore duplicates 
+            		continue;
+        		if ((token[i] == '-' && token[i - 1] == '+') || (token[i] == '+' && token[i - 1] == '-'))// Ignore alternating "+-" patterns (e.g., "+-i" or "-+o")
+				{
+            		continue;  // Skip ineffective mode
+				}
+				if (token[i] == 'i' || token[i] == 't') // If mode is 'i' or 't', it never takes a parameter
+				{
+            		type = std::string(1, token[0]) + token[i];
+					modeMap[type] = ""; // Ensure empty parameter
+				}
+				else if (token[i] == 'l' || token[i] == 'o' || token[i] == 'k')
+				{
+							orderAfterOperator = true;
+					if (token[0] == '-' && token[i] == 'k')
+					{
+
+          				type = std::string(1, token[0]) + token[i];
+						modeMap[type] = "";
+					}
+					else
+					{
+					    type = std::string(1, token[0]) + token[i];
+						modeWitPams.push(type);
+						k++;
+					}
+				}
+				
+			}
+		}
+		else if (!token.empty() && orderAfterOperator == true)
+		{
+			type = token;
+			params.push(type);
+		}
+		else
+		{
+			type = token;
+			falseParams.push(type);
+		}
+	}
+	// Debug Output
+	//
+	int j = k;
+	while (k-- > 1)
+		reverseRotate(modeWitPams);
+	while (j-- > 1)
+		reverseRotate(params);
+	while (!modeWitPams.empty() && !params.empty())
+	{
+		std::string bojo = modeWitPams.top(); modeWitPams.pop();
+		std::string yoyo = params.top(); params.pop();
+		modeMap[bojo] = yoyo;
+	}
+	if (!params.empty())
+	{
+		std::string extraf = params.top(); params.pop(); 
+		falseParams.push(extraf);
+	}
+	if (!modeWitPams.empty())
+	{
+		std::string emptyPam = modeWitPams.top(); modeWitPams.pop();
+		modeMap[emptyPam] = "";
+	}
+	std::cout << "\n\nMODE MAP:\n";
+	for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it)
+	{
+		std::cout << it->first << " -> " << (it->second.empty() ? "(no param)" : it->second) << std::endl;
+	}
+	std::map<std::string, std::string>* returnedMap = new std::map<std::string, std::string>(modeMap); // Allocate and copy the content of modeMap
+	return (returnedMap);
+}
+
+void Server::handleMode(int fd, const std::string& message)
+{
+	std::istringstream iss(message);
+	std::string command, channelName;
+	std::map<std::string, std::string> modes = (*parseMode(message));
+	executeMode(channelName , modes, fd);
+}
+
+void Server::reverseRotate(std::stack<std::string>& s)
+{
+	if (s.empty() || s.size() == 1)
+		return; // Nothing to rotate if stack has 0 or 1 element
+    std::queue<std::string> tempQueue;
+    // Step 1: Move all elements except the last one to a queue
+    while (s.size() > 1)
+	{
+		tempQueue.push(s.top());
+		s.pop();
+    }
+	// Step 2: The last remaining element is the bottom-most element
+	std::string bottomElement = s.top();
+	s.pop();
+	// Step 3: Restore the elements back to the stack in original order
+	while (!tempQueue.empty())
+	{
+		s.push(tempQueue.front());
+		tempQueue.pop();
+	}
+	// Step 4: Push the bottom-most element to the top
+	s.push(bottomElement);
+}
+
+void Server::executeMode(std::string channelName, std::map<std::string, std::string>& modeMap, int fd)
+{
+	//Retreive Client
+	std::vector<Client>::iterator it = getClient(fd);
+	if (it == clients.end())
+		throw std::runtime_error("Client was not found]\n");
+	Client& client = (*this)[it];
+	//Retrieve Channel
+	std::map<std::string, Channel>::iterator bt = channels.find(channelName);
+	if (bt == channels.end())
+	{
+		std::string msg = std::string(RED) + "403 " + client.getNickname() + " " + channelName + " :No such channel" + std::string(WHI);
+		send(fd, msg.c_str(), msg.size(), 0);
+		return;
+ 	}
+	Channel& channel = bt->second;
+	(void)channel;
+	(void)modeMap;
+	//Switch statements
+	
+}
+
+void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
+{
+	std::string extracted;
+	for (std::string::size_type i = 0; i < mode.length(); i++)
+	{
+		if (std::isalpha(mode[i]))
+			extracted += mode[i];
+	}
+	std::map<std::string, bool>::iterator it = channel.getModes().find(extracted);
+	it->second = condition;
+}
+
 void Server::processQuit(int fd, const std::string& reason) 
 {
     std::string nickname = clients[fd].getNickname();
@@ -163,7 +358,7 @@ void Server::serverInit(int port, std::string pass)
 	{ //-> run the server until the signal is received
 
 		if ((poll(&fds[0],fds.size(),-1) == -1) && Server::signal == false) //-> wait for an event
-			throw(std::runtime_error("poll() faild"));
+			throw(std::runtime_error("poll() failed"));
 
 		for (size_t i = 0; i < fds.size(); i++){ //-> check all file descriptors
 			if (fds[i].revents & POLLIN)
@@ -182,6 +377,7 @@ void Server::sendCapabilities(int fd)
 {
 	std::string capMessage = "CAP * LS :multi-prefix sasl\r\n";
 	send(fd, capMessage.c_str(), capMessage.size(), 0);
+	return ;
 }
 
 void Server::processCapReq(int fd, const std::string& message)
@@ -189,6 +385,7 @@ void Server::processCapReq(int fd, const std::string& message)
 	if (message.find("CAP REQ") != std::string::npos){
 		std::string capAck = "CAP * ACK :multi-prefix sasl\r\n";
 		send(fd, capAck.c_str(), capAck.size(), 0);
+		return ;
 	}
 }
 
@@ -361,6 +558,7 @@ void Server::capEnd(int fd)
 {
 	std::string capEnd = "CAP END\r\n";
 	send(fd, capEnd.c_str(), capEnd.size(), 0);
+	return;
 }
 
 std::vector<Client>::iterator Server::getClient(int fd)
@@ -463,7 +661,7 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	}
 	if (!channel.getKey().empty() && channel.getKey() != key)
 	{
-		std::string errorMsg = std::string(RED) + "475" + client.getNickname() + " :Incorrrect channel key\r\n" + std::string(WHI);
+		std::string errorMsg = std::string(RED) + "475 " + client.getNickname() + " " + channelName + " :Cannot join channel (+k)\r\n" + std::string(WHI);
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 		return;
     }
@@ -473,10 +671,10 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
         send(fd, errorMsg.c_str(), errorMsg.size(), 0);
         return;
     }
-	
+
 	// 4. Add the client to the channel
 	channel.addClient(fd);
-	
+	std::cout << channel.getKey() << std::endl;
 	// 5. Broadcast JOIN message to all clients in the channel
 	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(WHI);
 	channel.broadcastToChannel(joinMessage);
@@ -545,13 +743,12 @@ void Server::processPrivmsg(int fd, const std::string& message)
     size_t commandEnd = message.find(' ');
     if (commandEnd == std::string::npos || message.substr(0, commandEnd) != "PRIVMSG") {
         std::string error = std::string(RED) + "421: Unknown command\r\n" + std::string(WHI);
-        send(fd, error.c_str(), error.size(), 0); // ERR_UNKNOWNCOMMAND
-        return;
     }
     // Skip the "PRIVMSG" part
     size_t targetStart = commandEnd + 1; // Position after "PRIVMSG "
     size_t spacePos = message.find(' ', targetStart); // Find space after target
-    if (spacePos == std::string::npos) {
+    if (spacePos == std::string::npos)
+	{
         // If there's no space after the target, no message text is provided
         std::string error = std::string(RED) + "411: No recipient given (PRIVMSG)\r\n" + std::string(WHI);
         send(fd, error.c_str(), error.size(), 0); // ERR_NORECIPIENT
@@ -624,4 +821,22 @@ std::string Server::trim(const std::string& str)
     size_t start = str.find_first_not_of("\r\n\t");
     size_t end = str.find_last_not_of("\r\n\t");
     return (start == std::string::npos || end == std::string::npos) ? "" : str.substr(start, end - start + 1);
+}
+
+bool isNumber(const std::string &str)
+{
+    for (size_t i = 0; i < str.length(); i++)
+	{
+        if (!std::isdigit(str[i])) // Check if all characters are digits
+            return false;
+    }
+    return !str.empty(); // Ensure the string isn't empty
+}
+
+int stringToInt(const std::string &str)
+{
+	std::stringstream ss(str);
+	int number;
+	ss >> number; // Convert string to integer
+	return number;
 }
