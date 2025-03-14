@@ -29,4 +29,5 @@ public:
 	std::string getIPadd();
 	std::string getUserName();
 	std::string getNickname();
+
 };

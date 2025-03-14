@@ -4,7 +4,8 @@ Channel::Channel(){}
 
 Channel::~Channel(){}
 
-Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), priOperator(fd), topic(""), inviteOnly(false), max(INT_MAX), topicRes(false)
+//Changed constructor
+Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), topic(""), inviteOnly(false), max(INT_MAX), topicRes(false)
 {
 	std::string i = "i"; std::string k = "k"; std::string l = "l"; std::string t = "t"; std::string o = "o";
 	modes[i] = false;
@@ -18,6 +19,7 @@ Channel::Channel(const std::string& channelName, const std::string& key, int fd)
 	addOperator(fd);
 }
 
+//Changed copy assignment operator
 Channel& Channel::operator=(const Channel& other)
 {
 	if (this != &other)
@@ -25,7 +27,6 @@ Channel& Channel::operator=(const Channel& other)
 		// Assign each member variable
 		this->channelName = other.channelName; // Note: channelName is const, so cannot be reassigned
 		this->key = other.key;                 // key is also const and cannot be reassigned
-		this->priOperator = other.priOperator;
 		this->topic = other.topic;
 		this->inviteOnly = other.inviteOnly;
 		this->max = other.max;
@@ -44,19 +45,6 @@ void Channel::addClient(int fd)
 	clientFds.push_back(fd);
 }
 
-void Channel::addOperator(int fd)
-{
-	operFds.push_back(fd);
-}
-
-void Channel::removeOperator(int fd)
-{
-	std::vector<int>::iterator it = std::find(operFds.begin(), operFds.end(), fd);
-	if (it != operFds.end())// If foundoper
-		operFds.erase(it);    // Remove from the vector
-}
-
-void Channel::setKey(const std::string& key){this->key = key;}
 
 void Channel::setMax(int max){this->max = max;}
 
@@ -71,8 +59,6 @@ int Channel::isFull()
 		return (1);
 	return (0);
 }
-
-std::string Channel::getKey(){return this->key;}
 
 int Channel::isInviteOnly()
 {
@@ -133,13 +119,14 @@ std::vector<int> Channel::listUsers()
 	return(temp);
 }
 
-int Channel::getPriOperator(){return this->priOperator;}
-
+//Get Modes
 std::map<std::string, bool> & Channel::getModes(){return this->modes;}
 
+//Get this
 std::string Channel::getChannelName(){ 	std::cout << channelName << std::endl;
 return this->channelName;}
 
+//Is operator
 int Channel::isOperator(int fd)
 {
 	for (std::vector<int>::iterator it = operFds.begin(); it != operFds.end(); ++it)
@@ -155,6 +142,33 @@ std::vector<int> & Channel::getOperFds(){return this->operFds;}
 
 void Channel::setInviteOnly(bool condition){ this->inviteOnly = condition;}
 
+//Topic Restrictions 
 void Channel::setTopRes(bool condition){ this->topicRes = condition;}
 
 bool Channel::getTopRes(){ return this->topicRes;}
+
+
+//gET key function
+// Remove and add Operator
+void Channel::addOperator(int fd)
+{
+	operFds.push_back(fd);
+}
+
+void Channel::removeOperator(int fd)
+{
+	std::vector<int>::iterator it = std::find(operFds.begin(), operFds.end(), fd);
+	if (it != operFds.end())// If foundoper
+		operFds.erase(it);    // Remove from the vector
+}
+
+//Key function
+void Channel::setKey(const std::string& key){this->key = key;}
+std::string Channel::getKey(){return this->key;}
+
+void Channel::removeClient(int fd)
+{
+	std::vector<int>::iterator it = std::find(clientFds.begin(), clientFds.end(), fd);
+	if (it != clientFds.end())// If foundoper
+		clientFds.erase(it);    // Remove from the vector
+}
