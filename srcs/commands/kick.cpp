@@ -118,4 +118,4 @@ void Server::kickCommand(int fd, const std::string &message)
             channel.removeClient(target.getFd());
         }
     }
-}\
+}

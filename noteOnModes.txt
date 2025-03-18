@@ -1,0 +1,39 @@
+6. Interactions With Other Modes
+
++k and +i (Invite-Only)
+If both +k (key) and +i (invite-only) are set:
+A user must be invited and know the key to join.
+less
+Copy
+Edit
+MODE #chatroom +k secretkey +i
+Even with the correct key, a non-invited user gets:
+arduino
+Copy
+Edit
+473 User123 #chatroom :Cannot join channel (+i)
++k and +l (User Limit)
+If +l (user limit) is set alongside +k, a user must know the key and the channel must not be full.
+nginx
+Copy
+Edit
+MODE #chatroom +k secretkey +l 10
+If 10 users are in the channel, a new user gets:
+arduino
+Copy
+Edit
+471 User123 #chatroom :Cannot join channel (+l)
++k and +o (Operator Mode)
+Even operators must enter the key if they are not in the channel when +k is set.
+
+An operator inside the channel can remove the key using:
+
+nginx
+Copy
+Edit
+MODE #chatroom -k
+The response:
+ruby
+Copy
+Edit
+:irc.example.com MODE #chatroom -k

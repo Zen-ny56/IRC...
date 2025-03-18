@@ -131,7 +131,6 @@ int Channel::isOperator(int fd)
 {
 	for (std::vector<int>::iterator it = operFds.begin(); it != operFds.end(); ++it)
 	{
-		std::cout << "Going through the loop" <<  *it << std::endl;
 		if (*it == fd)
 			return (1);
 	}

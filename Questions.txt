@@ -1,1 +1,10 @@
-1) Can an operator kick another operator, this is can be handled according to your discretion. Please put a protec
+Summary of Broadcast & Error Messages
+Mode	Broadcast Message	                Error Messages
++i	*** Alice sets mode +i on #chatroom	    473 ERR_INVITEONLYCHAN (Cannot join)
+                                            482 ERR_CHANOPRIVSNEEDED (Not an operator)
++t	*** Alice sets mode +t on #chatroom	    482 ERR_CHANOPRIVSNEEDED (Not an operator)
++k	*** Alice sets mode +k <password> on #chatroom	475 ERR_BADCHANNELKEY (Wrong password)
+4                       82 ERR_CHANOPRIVSNEEDED (Not an operator)
++l	*** Alice sets mode +l <limit> on #chatroom	471 ERR_CHANNELISFULL (Limit reached)
+482 ERR_CHANOPRIVSNEEDED (Not an operator)
++o	*** Alice sets mode +o Bob on #chatroom	482 ERR_CHANOPRIVSNEEDED (Not an operator)
