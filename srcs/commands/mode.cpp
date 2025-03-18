@@ -104,7 +104,6 @@ void Server::handleMode(int fd, const std::string& message)
 	std::string command, channelName;
 	std::map<std::string, std::string> modes = (*parseMode(message));
 	executeMode(message, modes, fd);
-
 }
 
 void Server::executeMode(const std::string& message, std::map<std::string, std::string>& modeMap, int fd)
@@ -136,9 +135,11 @@ void Server::executeMode(const std::string& message, std::map<std::string, std::
 	for (std::map<std::string, std::string>::iterator ct = modeMap.begin(); ct != modeMap.end(); ++ct)
 	{
 		std::string modeStr = ct->first; // Example: "+l"
+		std::cout << ct->second << std::endl;
 		std::string msg;
 		int limit;
 		char modeType = modeStr[1];
+		std::vector<Client>::iterator targetIt;
 		if (modeStr[0] == '+')
 		{
 			switch (modeType)
@@ -153,35 +154,72 @@ void Server::executeMode(const std::string& message, std::map<std::string, std::
 					}
 					limit = stringToInt(ct->second);
 					channel.setMax(limit);
-					msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
-					channel.broadcastToChannel(msg);
+					// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
+					// channel.broadcastToChannel(msg);
 					break;
 				case 'k':
 					channel.setKey(ct->second);
-					msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
-					channel.broadcastToChannel(msg);
+					// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
+					// channel.broadcastToChannel(msg);
         			break;
 				case 't':
 					channel.setTopRes(true);
-					std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
+					// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 					break;
 				case 'i':
 					channel.setInviteOnly(true);
-					std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
+					// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
         			break;
 				case 'o':
- 					std::vector<Client>::iterator targetIt = getClientUsingNickname(ct->second);
+ 					targetIt = getClientUsingNickname(ct->second);
             		if (targetIt == clients.end())
             		{
                 		msg = std::string(RED) + ":ircserv 401 " + ct->second + " :No such user\r\n" + std::string(EN);
                 		send(fd, msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
             		}
-					channel.addOperator(fd);
+					channel.addOperator(targetIt->getFd());
 					break; 
     			default:
         			std::cerr << "Unknown mode: " << modeStr << "\n";
        				 break;
-}
+			}
+		}
+		else
+		{
+			switch (modeType)
+			{
+				case 'l':
+					// Check if it's valid integer and convert
+					channel.setMax(INT_MAX);
+					// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
+					// channel.broadcastToChannel(msg);
+					break;
+				case 'k':
+					channel.setKey("");
+					// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
+					// channel.broadcastToChannel(msg);
+        			break;
+				case 't':
+					channel.setTopRes(false);
+					// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
+					break;
+				case 'i':
+					channel.setInviteOnly(false);
+					// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
+        			break;
+				case 'o':
+ 					targetIt = getClientUsingNickname(ct->second);
+            		if (targetIt == clients.end())
+            		{
+                		msg = std::string(RED) + ":ircserv 401 " + ct->second + " :No such user\r\n" + std::string(EN);
+                		send(fd, msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
+            		}
+					channel.removeOperator(targetIt->getFd());
+					break; 
+    			default:
+        			std::cerr << "Unknown mode: " << modeStr << "\n";
+       				 break;
+			}
 		}
 		
 	}
@@ -202,7 +240,8 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, 
 	if (modes.find("k") != modes.end() && modes.at("k") && channel.isOperator(fd))
 	{
 		modeString += "k";
-		modeArgs += " " + channel.getKey();
+		if (channel.isOperator(fd))
+			modeArgs += " " + channel.getKey();
 	}
 	if (modes.find("o") != modes.end())
 	{

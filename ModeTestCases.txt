@@ -1,4 +1,4 @@
-MODE #channel1 +i +k pass -l 30
+MODE #channel1 +i +k pass -l 3
 MODE #chatroom +okt Biggie Password TopSecret
 MODE #channel -o Dis +k better
 MODE #testroom +tlk Restricted 1234 Key
