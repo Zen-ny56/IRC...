@@ -1,8 +1,0 @@
-MODE #channel1 +i +k pass -l 30
-MODE #chatroom +okt Biggie Password TopSecret
-MODE #channel -o Dis +k better
-MODE #testroom +tlk Restricted 1234 Key
-MODE #general +i -t +l 50
-MODE #room +i something +k pass -l 20
-MODE #secure -k -o -t
-MODE #random +oi User1 -l 100 +k SecretPass -t

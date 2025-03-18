@@ -24,6 +24,7 @@
 #define WHI "\e[0;37m" //-> for white color
 #define GRE "\e[1;32m" //-> for green color
 #define YEL "\e[1;33m" //-> for yellow color
+#define EN  "\0m"       // -> for closing color
 
 class Client;
 class Channel;
@@ -39,7 +40,6 @@ class Server //-> class for server
         std::vector<struct pollfd> fds; //-> vector of pollfd
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
-        // std::map<std::string, std::string> modeMap; // -> map of modes parsed
 
     public:
         Server(); //-> default constructor
@@ -69,15 +69,17 @@ class Server //-> class for server
         void sendWelcome(int fd, Client& client);
         Client& operator[](std::vector<Client>::iterator it);
         void processPrivmsg(int fd, const std::string& message);
-        std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname);
+        std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname); // Added
         std::string trim(const std::string& str);
-        void handleMode(int fd, const std::string& message); 
-        std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel, int fd);
-        void resetModeBool(Channel& channel, std::string mode, bool condition);
-        void executeMode(std::string channelName, std::map<std::string, std::string>& modeMap, int fd);
+        void handleMode(int fd, const std::string& message); // Added
+        std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel, int fd); // Added
+        void resetModeBool(Channel& channel, std::string mode, bool condition); // Added
+        void executeMode(const std::string& message, std::map<std::string, std::string>& modeMap, int fd); // Added
         std::map<std::string, std::string>* parseMode(const std::string& message); // delete mode after executed
         void reverseRotate(std::stack<std::string>& s); // Reverse rotate on stack in parsing
-
+        void kickCommand(int fd, const std::string &message);
+        void topicCommand(int fd, const std::string &message);
+        void inviteCommand(int fd, std::string const &message);
 };
 
 bool isNumber(const std::string &str);
