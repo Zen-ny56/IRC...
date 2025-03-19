@@ -52,6 +52,11 @@ std::map<std::string, std::string>*  Server::parseMode(const std::string& messag
 						k++;
 					}
 				}
+				else
+				{
+					type = std::string(1,token[0]) + token[i];
+					modeMap[type] = "";
+				}
 				
 			}
 		}
@@ -102,22 +107,11 @@ void Server::handleMode(int fd, const std::string& message)
 {
 	std::istringstream iss(message);
 	std::string command, channelName;
-	std::map<std::string, std::string> modes = (*parseMode(message));
-	executeMode(message, modes, fd);
-}
-
-void Server::executeMode(const std::string& message, std::map<std::string, std::string>& modeMap, int fd)
-{
-	//Retreive Client
-    std::istringstream iss(message);
-	std::string command, channelName;
-    iss >> command;
-    iss >> channelName;
+	iss >> command; iss >> channelName;
 	std::vector<Client>::iterator it = getClient(fd);
 	if (it == clients.end())
 		throw std::runtime_error("Client was not found]\n");
 	Client& client = (*this)[it];
-	//Retrieve Channel
 	std::map<std::string, Channel>::iterator bt = channels.find(channelName);
 	if (bt == channels.end())
 	{
@@ -132,8 +126,19 @@ void Server::executeMode(const std::string& message, std::map<std::string, std::
 		send(fd, msg.c_str(), msg.size(), 0);
 		return;
 	}
+	std::map<std::string, std::string> modes = (*parseMode(message));
+	std::map<std::string, bool> modeBool = channel.getModes();
+	if (modes.empty())
+		generateRPL_CHANNELMODEIS(client, channel, modeBool, fd);
+	else
+		executeMode(client, channel, modes, modeBool, fd);
+}
+
+void Server::executeMode(Client& client, Channel& channel, std::map<std::string, std::string>& modeMap, std::map<std::string, bool>& modeBool, int fd)
+{
 	for (std::map<std::string, std::string>::iterator ct = modeMap.begin(); ct != modeMap.end(); ++ct)
 	{
+		std::string i = "i"; std::string k = "k"; std::string l = "l"; std::string t = "t"; std::string o = "o";
 		std::string modeStr = ct->first; // Example: "+l"
 		std::cout << ct->second << std::endl;
 		std::string msg;
@@ -148,26 +153,30 @@ void Server::executeMode(const std::string& message, std::map<std::string, std::
 					// Check if it's valid integer and convert
 					if (isNumber(ct->second) == false)
 					{
-						msg = std::string(RED) + ":ircserv 403 " + client.getNickname() + " " + channel.getChannelName() + " :No such channel" + std::string(WHI);
+						msg = std::string(RED) + ":ircserv 461 " + client.getNickname() + " " + channel.getChannelName() + " :Not enough parameters" + std::string(WHI);
 						send(fd, msg.c_str(), msg.size(), 0);
 						return;
 					}
 					limit = stringToInt(ct->second);
 					channel.setMax(limit);
+					modeBool[l] = true;
 					// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 					// channel.broadcastToChannel(msg);
 					break;
 				case 'k':
 					channel.setKey(ct->second);
+					modeBool[k] = true;
 					// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 					// channel.broadcastToChannel(msg);
         			break;
 				case 't':
 					channel.setTopRes(true);
+					modeBool[t] = true;
 					// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 					break;
 				case 'i':
 					channel.setInviteOnly(true);
+					modeBool[i] = true;
 					// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
         			break;
 				case 'o':
@@ -178,10 +187,12 @@ void Server::executeMode(const std::string& message, std::map<std::string, std::
                 		send(fd, msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
             		}
 					channel.addOperator(targetIt->getFd());
+					modeBool[o] = true;
 					break; 
     			default:
-        			std::cerr << "Unknown mode: " << modeStr << "\n";
-       				 break;
+					msg = std::string(RED) + ":ircserv 472 " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
+        			send(fd, msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
+       				break;
 			}
 		}
 		else
@@ -191,20 +202,24 @@ void Server::executeMode(const std::string& message, std::map<std::string, std::
 				case 'l':
 					// Check if it's valid integer and convert
 					channel.setMax(INT_MAX);
+					modeBool[l] = false;
 					// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 					// channel.broadcastToChannel(msg);
 					break;
 				case 'k':
 					channel.setKey("");
+					modeBool[k] = false;
 					// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 					// channel.broadcastToChannel(msg);
         			break;
 				case 't':
 					channel.setTopRes(false);
+					modeBool[t] = false;
 					// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 					break;
 				case 'i':
 					channel.setInviteOnly(false);
+					modeBool[i] = false;
 					// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
         			break;
 				case 'o':
@@ -215,10 +230,12 @@ void Server::executeMode(const std::string& message, std::map<std::string, std::
                 		send(fd, msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
             		}
 					channel.removeOperator(targetIt->getFd());
+					modeBool[o] = false;
 					break; 
     			default:
-        			std::cerr << "Unknown mode: " << modeStr << "\n";
-       				 break;
+        			msg = std::string(RED) + ":ircserv 472 " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
+        			send(fd, msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
+       				break;
 			}
 		}
 		
@@ -226,24 +243,24 @@ void Server::executeMode(const std::string& message, std::map<std::string, std::
 	//Switch statements
 }
 
-std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, int fd)
+std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, std::map<std::string, bool>& modeBool, int fd)
 {
 	std::string modeString = "+";
 	std::string modeArgs;
 	std::vector<int> operators = channel.getOperFds();
-	std::map<std::string, bool> modes = channel.getModes();
+	std::cout << " RIGHT HERE " << std::endl;
 	// Check which modes are active in the channel
-	if (modes.find("i") != modes.end() && modes.at("i"))
+	if (modeBool.find("i") != modeBool.end() && modeBool.at("i"))
 		modeString += "i";
-	if (modes.find("t") != modes.end() && modes.at("t"))
+	if (modeBool.find("t") != modeBool.end() && modeBool.at("t"))
 		modeString += "t";
-	if (modes.find("k") != modes.end() && modes.at("k") && channel.isOperator(fd))
+	if (modeBool.find("k") != modeBool.end() && modeBool.at("k") && channel.isOperator(fd))
 	{
 		modeString += "k";
 		if (channel.isOperator(fd))
 			modeArgs += " " + channel.getKey();
 	}
-	if (modes.find("o") != modes.end())
+	if (modeBool.find("o") != modeBool.end())
 	{
 		for (std::vector<int>::iterator it = operators.begin(); it != operators.end(); ++it)
 		{
@@ -251,12 +268,13 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, 
 			break;
 		}
 	}
-	if (modes.find("l") != modes.end() && modes.at("l"))
+	if (modeBool.find("l") != modeBool.end() && modeBool.at("l"))
 	{
 		modeString += "l";
 		modeArgs += " " + std::to_string(channel.getMax());
 	}
 	// Format response
 	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
+	send(fd, response.c_str(), response.size(), 0);
 	return (response);
 }

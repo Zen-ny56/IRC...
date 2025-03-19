@@ -77,40 +77,6 @@ void Server::receiveNewData(int fd)
 	}
 }
 
-// std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, int fd)
-// {
-// 	std::string modeString = "+";
-// 	std::string modeArgs;
-// 	std::vector<int> operators = channel.getOperFds();
-// 	std::map<std::string, bool> modes = channel.getModes();
-// 	// Check which modes are active in the channel
-// 	if (modes.find("i") != modes.end() && modes.at("i"))
-// 		modeString += "i";
-// 	if (modes.find("t") != modes.end() && modes.at("t"))
-// 		modeString += "t";
-// 	if (modes.find("k") != modes.end() && modes.at("k") && channel.isOperator(fd))
-// 	{
-// 		modeString += "k";
-// 		modeArgs += " " + channel.getKey();
-// 	}
-// 	if (modes.find("o") != modes.end())
-// 	{
-// 		for (std::vector<int>::iterator it = operators.begin(); it != operators.end(); ++it)
-// 		{
-// 			modeString += "o";
-// 			break;
-// 		}
-// 	}
-// 	if (modes.find("l") != modes.end() && modes.at("l"))
-// 	{
-// 		modeString += "l";
-// 		modeArgs += " " + std::to_string(channel.getMax());
-// 	}
-// 	// Format response
-// 	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
-// 	return (response);
-// }
-
 void Server::reverseRotate(std::stack<std::string>& s)
 {
 	if (s.empty() || s.size() == 1)

@@ -72,9 +72,9 @@ class Server //-> class for server
         std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname); // Added
         std::string trim(const std::string& str);
         void handleMode(int fd, const std::string& message); // Added
-        std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel, int fd); // Added
+        std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel, std::map<std::string, bool>& modeBool, int fd); // Added
         void resetModeBool(Channel& channel, std::string mode, bool condition); // Added
-        void executeMode(const std::string& message, std::map<std::string, std::string>& modeMap, int fd); // Added
+        void executeMode(Client& client, Channel& channel, std::map<std::string, std::string>& modeMap, std::map<std::string, bool>& modeBool, int fd);
         std::map<std::string, std::string>* parseMode(const std::string& message); // delete mode after executed
         void reverseRotate(std::stack<std::string>& s); // Reverse rotate on stack in parsing
         void kickCommand(int fd, const std::string &message);
