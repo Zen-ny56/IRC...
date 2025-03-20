@@ -5,7 +5,7 @@
 void Server::inviteCommand(int fd, std::string const &message)
 {
     // Parse the message
-    if (message.rfind("INVITE ") == 0)
+    if (message.rfind("/INVITE ") == 0)
 	{
         std::vector<Client>::iterator it = getClient(fd);
         if (it == clients.end())
