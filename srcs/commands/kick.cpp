@@ -4,7 +4,7 @@
 void Server::kickCommand(int fd, const std::string &message)
 {
     // Step 1: Ensure the message starts with "KICK " and remove the prefix
-    if (message.rfind("KICK ", 0) == 0)
+    if (message.rfind("/KICK ", 0) == 0)
     {
         std::vector<Client>::iterator it = getClient(fd);
         if (it == clients.end())

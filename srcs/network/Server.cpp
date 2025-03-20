@@ -50,30 +50,40 @@ void Server::receiveNewData(int fd)
 	{ //-> print the received data
 		buff[bytes] = '\0';
 		std::string message(buff);
-		if (message.find("CAP LS") != std::string::npos)
+		if (message.find("/CAP LS") != std::string::npos)
 			sendCapabilities(fd);
-		else if (message.rfind("PASS ", 0) == 0)
+		else if (message.rfind("/PASS ", 0) == 0)
 			validatePassword(fd, message);
-		else if (message.rfind("NICK ", 0) == 0)
+		else if (message.rfind("/NICK ", 0) == 0)
 			processNickUser(fd, message);
-		else if (message.rfind("USER ", 0) == 0)
+		else if (message.rfind("/USER ", 0) == 0)
 			processUser(fd, message);
-		else if (message.find("CAP REQ") != std::string::npos)
+		else if (message.rfind("/INVITE ", 0) == 0)
+			inviteCommand(fd, message);
+		else if (message.rfind("/KICK ", 0) == 0)
+			kickCommand(fd, message);
+		else if (message.rfind("/TOPIC ", 0) == 0)
+			topicCommand(fd, message);
+		else if (message.find("/CAP REQ") != std::string::npos)
 			processCapReq(fd, message);
-		else if (message.find("QUIT", 0) == 0)
+		else if (message.find("/QUIT", 0) == 0)
 			processQuit(fd, message);
-		else if (message.find("JOIN", 0) == 0)
+		else if (message.find("/JOIN", 0) == 0)
 			handleChannel(fd, message); /*Function where JOIN is handled*/
-		else if (message.find("PRIVMSG", 0) == 0)
+		else if (message.find("/PRIVMSG", 0) == 0)
 			processPrivmsg(fd, message);
-		else if (message.find("AUTHENTICATE") != std::string::npos)
+		else if (message.find("/AUTHENTICATE") != std::string::npos)
 			processSasl(fd, message);
-		else if (message.find("CAP END") != std::string::npos)
+		else if (message.find("/CAP END") != std::string::npos)
 			capEnd(fd);
-		else if (message.find("MODE") != std::string::npos)
+		else if (message.find("/MODE") != std::string::npos)
 			handleMode(fd, message);
 		else
-			std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
+		{
+			std::string buff = "Invalid Command: try again!\n";
+			send(fd, buff.c_str(), buff.size(), 0);
+			// std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
+		} //handling authentication error to be displayed to the client.
 	}
 }
 
@@ -231,7 +241,7 @@ void Server::processCapReq(int fd, const std::string& message)
 
 void Server::validatePassword(int fd, const std::string& message)
 {
-	if (message.rfind("PASS", 0) == 0)
+	if (message.rfind("/PASS", 0) == 0)
 	{ // Check if message starts with "PASS"
 		std::vector<Client>::iterator it = getClient(fd);
 		if (it == clients.end())
@@ -285,7 +295,7 @@ void Server::processUser(int fd, const std::string& message)
 	while (std::getline(iss, part, ' '))
         parts.push_back(part);
     // Check minimum parameter count
-    if (parts.size() < 5 || parts[0] != "USER")
+    if (parts.size() < 5 || parts[0] != "/USER")
 	{
 		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
@@ -317,6 +327,55 @@ void Server::processUser(int fd, const std::string& message)
 
 void Server::sendWelcome(int fd, Client& client)
 {
+	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
+    std::cout << "\033[1;32m          IRC Command List and Format        \033[0m" << std::endl;
+    std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/CAP LS  | \033[1;37m /CAP LS\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/PASS    | \033[1;37m /PASS <password>\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/NICK    | \033[1;37m /NICK <nickname>\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/USER    | \033[1;37m /USER <username> <hostname> <servername> <realname>\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/INVITE  | \033[1;37m /INVITE <nickname> <channel>\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/KICK    | \033[1;37m /KICK <channel> <nickname> [<reason>]\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/TOPIC   | \033[1;37m /TOPIC <channel> [<topic>]\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/CAP REQ | \033[1;37m /CAP REQ <capability>\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/QUIT    | \033[1;37m /QUIT [<message>]\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/JOIN    | \033[1;37m /JOIN <channel> [<key>]\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/PRIVMSG | \033[1;37m /PRIVMSG <target> <message>\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/AUTHENTICATE | \033[1;37m /AUTHENTICATE <data>\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/CAP END | \033[1;37m /CAP END\033[0m" << std::endl;
+
+    std::cout << "\033[1;33m* \033[0m";
+    std::cout << "/MODE    | \033[1;37m /MODE <target> <mode>\033[0m" << std::endl;
+
+    std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
+    std::cout << "\033[1;32m            End of Command List               \033[0m" << std::endl;
+    std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
 	// 1. RPL_WELCOME (001)
 	std::string welcomeMsg = std::string(YEL) + ":" + "ircserv" + " 001 " + client.getNickname() + " :Welcome to the IRC Network " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
 	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
@@ -337,7 +396,7 @@ void Server::sendWelcome(int fd, Client& client)
 void Server::processNickUser(int fd, const std::string& message)
 {
 	// NICK command
-	if (message.rfind("NICK ", 0) == 0)
+	if (message.rfind("/NICK ", 0) == 0)
 	{
 		std::vector<Client>::iterator it = getClient(fd);
 		if (it == clients.end())
@@ -381,7 +440,7 @@ void Server::processNickUser(int fd, const std::string& message)
 
 void Server::processSasl(int fd, const std::string& message)
 {
-	if (message.find("AUTHENTICATE PLAIN") != std::string::npos)
+	if (message.find("/AUTHENTICATE PLAIN") != std::string::npos)
 	{
 		std::string response = "AUTHENTICATE +\r\n";
 		send(fd, response.c_str(), response.size(), 0);
