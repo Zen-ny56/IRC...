@@ -22,7 +22,7 @@ void Server::kickCommand(int fd, const std::string &message)
         iss >> channelName;
         if (channelName.empty())
         {
-            std::string errormsg = std::string(RED) + "461 KICK :Not enough parameters\r\n" + std::string(EN);
+            std::string errormsg = std::string(RED) + ":ircserv 461 " + client.getNickname(); + " JOIN :Not enough parameters\r\n" + std::string(EN);
             send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NEEDMOREPARAMS
             return;
         }
@@ -58,7 +58,7 @@ void Server::kickCommand(int fd, const std::string &message)
         // Check if there are enough parameters (at least one user)
         if (users.empty())
         {
-            std::string errormsg = std::string(RED) + "461 KICK :Not enough parameters\r\n" + std::string(EN);
+            std::string errormsg = std::string(RED) + ":ircserv 461 " + client.getNickname(); + " JOIN :Not enough parameters\r\n" + std::string(EN);
             send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NEEDMOREPARAMS
             return;
         }
@@ -68,17 +68,16 @@ void Server::kickCommand(int fd, const std::string &message)
 
         if (channelIt == channels.end())
         {
-            std::string errormsg = std::string(RED) + "403 " + channelName + " :No such channel\r\n" + std::string(EN);
-            send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NOSUCHCHANNEL
+            std::string err = std::string(RED) + ":ircserv 403 " + client.getNickname(); + " " + channelName + " :No such channel" + std::string(EN);
+            send(fd, err.c_str(), err.size(), 0); // ERR_NOSUCHCHANNEL
             return;
         }
-
         Channel &channel = channelIt->second;
 
         // Step 5: Check if the client is an operator in the channel
         if (!channel.isOperator(fd))
         {
-            std::string errormsg = std::string(RED) + "482 " + channelName + " :You're not channel operator\r\n" + std::string(EN);
+            std::string errormsg = std::string(RED) + ":ircserv 482 " + client.getNickname(); + " " + channelName + " :You're not channel operator\r\n" + std::string(EN);
             send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_CHANOPRIVSNEEDED
             return;
         }
@@ -90,7 +89,7 @@ void Server::kickCommand(int fd, const std::string &message)
             std::vector<Client>::iterator targetIt = getClientUsingNickname(*userIt);
             if (targetIt == clients.end())
             {
-                std::string errormsg = std::string(RED) + "401 " + *userIt + " :No such user\r\n" + std::string(EN);
+                std::string errormsg = std::string(RED) + ":ircserv 401 " + *userIt + " :No such user\r\n" + std::string(EN);
                 send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NOSUCHNICK
                 continue;
             }

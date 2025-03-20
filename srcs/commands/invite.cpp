@@ -20,7 +20,7 @@ void Server::inviteCommand(int fd, std::string const &message)
 
         // Check if parameters are valid
         if (nickName.empty() || channelName.empty()) {
-            std::string err = std::string(RED) + "461 :Not enough parameters" + std::string(EN);
+            std::string err = std::string(RED) + ":ircserv 461 " + client.getNickname(); + " INVITE :Not enough parameters" + std::string(EN);
             send(fd, err.c_str(), err.size(), 0);
             return;
         }
@@ -28,7 +28,7 @@ void Server::inviteCommand(int fd, std::string const &message)
         // Check if channel exists and has at least one member
         std::map<std::string, Channel>::iterator channelIt = channels.find(channelName);
         if (channelIt == channels.end() || channelIt->second.listUsers().empty()) {
-            std::string err = std::string(RED) + "403 " + channelName + " :No such channel" + std::string(EN);
+            std::string err = std::string(RED) + ":ircserv 403 " + client.getNickname(); + " " + channelName + " :No such channel" + std::string(EN);
             send(fd, err.c_str(), err.size(), 0);
             return;
         }
@@ -37,7 +37,7 @@ void Server::inviteCommand(int fd, std::string const &message)
         // Check if client is a member of the channel
         if (channel.isInChannel(fd) == 0)
 		{
-            std::string err = std::string(RED) + "442 " + channelName + " :You're not on that channel" + std::string(EN);
+            std::string err = std::string(RED) + ":ircserv 442 " + client.getNickname(); + " " + channelName + " :You're not on that channel" + std::string(EN);
             send(fd, err.c_str(), err.size(), 0);
             return;
         }
@@ -45,7 +45,7 @@ void Server::inviteCommand(int fd, std::string const &message)
         // If the channel is invite-only, check if the client is an operator
         if (channel.isInviteOnly() && !channel.isOperator(fd))
 		{
-            std::string err = std::string(RED) + "473 " + channelName + " :Cannot invite to channel (Invite-only channel)" + std::string(EN);
+            std::string err = std::string(RED) + ":ircserv 473 " + client.getNickname(); + " " + channelName  + " :Cannot join channel (+i)" + std::string(EN);
             send(fd, err.c_str(), err.size(), 0);
             return;
         }
@@ -56,12 +56,13 @@ void Server::inviteCommand(int fd, std::string const &message)
 			int targetFd = targetClientIt->getFd();
 			if (channel.isInChannel(targetFd))
 			{
-				std::string err = std::string(RED) + "443 " + nickName + " " + channelName + " :User already on channel" + std::string(EN);
+				std::string err = std::string(RED) + ":ircserv 443 " + client.getNickname(); + " " + channelName + " :is already on channel" + std::string(EN);
 				send(fd, err.c_str(), err.size(), 0);
 				return;
 			}
 			// Send RPL_INVITING response to the inviter
-			std::string rpl_inviting = "341 " + client.getNickname() + " INVITED " + nickName + " to " + channelName + "\r\n";
+			// std::string rpl_inviting = ":ircserv 341 " + client.getNickname() + " INVITED " + nickName + " to " + channelName + "\r\n";
+			std::string rpl_inviting = ":ircserv 341 " + client.getNickname(); + " " + nickName + " " + channelName + "\r\n";
 			send(fd, rpl_inviting.c_str(), rpl_inviting.size(), 0);
         	// Send INVITE message to the target user
 			std::string inviteMessage =  nickName + " INVITED " + " to " + channelName + "\r\n";

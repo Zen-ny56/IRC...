@@ -1,0 +1,9 @@
+General Format of Numeric Replies
+php-template
+Copy
+Edit
+:<server> <code> <target> <message>
+<server> → The name of the IRC server sending the message.
+<code> → A three-digit numeric code (e.g., 001, 482, etc.).
+<target> → The nickname of the client receiving the message.
+<message> → The actual text message.

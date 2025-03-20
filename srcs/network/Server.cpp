@@ -252,13 +252,13 @@ void Server::validatePassword(int fd, const std::string& message)
 		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
 		if (client.getPassAuthen() == true)
 		{
-			std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + ":ircserv 462 :You may not reregister\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0);
 			return ;
 		}
 		if (receivedPassword.empty())
 		{
-			std::string errMsg = std::string(RED) + "461 PASS :Not enough parameters\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + ":ircserv 461 PASS :Not enough parameters\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 			return ;
 		}
@@ -269,7 +269,7 @@ void Server::validatePassword(int fd, const std::string& message)
 		} 
 		else
         {
-			std::string errMsg = std::string(RED) + "464 :Password incorrect\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + ":ircserv 464 :Password incorrect\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_PASSWDMISMATCH
 			return ;
         }
@@ -297,7 +297,7 @@ void Server::processUser(int fd, const std::string& message)
     // Check minimum parameter count
     if (parts.size() < 5 || parts[0] != "/USER")
 	{
-		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
+		std::string errMsg = std::string(RED) +  ":ircserv 461 USER :Not enough parameters\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
@@ -309,13 +309,13 @@ void Server::processUser(int fd, const std::string& message)
 	// Check if the user is already registered
 	if (client.getUserAuthen() == true)
 	{
-		std::string errMsg = std::string(RED) + "462 :You may not register\r\n" + std::string(WHI);
+		std::string errMsg = std::string(RED) + ":ircserv 462 :You may not register\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_ALREADYREGISTERED
 		return;
 	}
 	if (username.empty() || realname.empty())
 	{
-		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
+		std::string errMsg = std::string(RED) +  ":ircserv 461 USER :Not enough parameters\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
@@ -377,7 +377,7 @@ void Server::sendWelcome(int fd, Client& client)
     std::cout << "\033[1;32m            End of Command List               \033[0m" << std::endl;
     std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
 	// 1. RPL_WELCOME (001)
-	std::string welcomeMsg = std::string(YEL) + ":" + "ircserv" + " 001 " + client.getNickname() + " :Welcome to the IRC Network " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
+	std::string welcomeMsg = std::string(YEL) + ":ircserv" + " 001 " + client.getNickname() + " :Welcome to the IRC Network " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
 	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
 
 	// 2. RPL_YOURHOST (002)

@@ -1,0 +1,13 @@
+1) kick.cpp
+// Step 7: Check if the client is part of the channel
+if (!channel.isInChannel(target.getFd()))
+{
+    std::string errormsg = std::string(RED) + "441 " + *userIt + " " + channelName + " :They aren't on that channel\r\n" + std::string(EN);
+    send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_USERNOTINCHANNEL
+    continue;
+}
+
+//Format to 
+:server_name 401 nickname target :No such nick/channel
+
+2) 

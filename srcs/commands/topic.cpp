@@ -13,7 +13,7 @@ void Server::topicCommand(int fd, std::string const &message)
     // Ensure message has enough content
     if (message.size() < 7)
     {
-        std::string err = "461 " + client.getNickname() + " TOPIC :Not enough parameters\r\n";
+        std::string err = ":ircserv 461 " + client.getNickname() + " TOPIC :Not enough parameters\r\n";
         send(fd, err.c_str(), err.size(), 0);
         return;
     }
@@ -28,7 +28,7 @@ void Server::topicCommand(int fd, std::string const &message)
     // Ensure channel name starts with '#' or '&' (IRC standard)
     if (channelName.empty() || (channelName[0] != '#' && channelName[0] != '&'))
     {
-        std::string err = "403 " + client.getNickname() + " :Invalid channel name\r\n";
+        std::string err = ":ircserv 403 " + client.getNickname() + " " + channelName +  " :Invalid channel name\r\n";
         send(fd, err.c_str(), err.size(), 0);
         return;
     }
@@ -51,7 +51,7 @@ void Server::topicCommand(int fd, std::string const &message)
     std::map<std::string, Channel>::iterator channelIt = channels.find(channelName);
     if (channelIt == channels.end())
     {
-        std::string err = "403 " + client.getNickname() + " " + channelName + " :No such channel\r\n";
+        std::string err = ":ircserv 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n";
         send(fd, err.c_str(), err.size(), 0);
         return;
     }
@@ -60,7 +60,7 @@ void Server::topicCommand(int fd, std::string const &message)
     // Check if the client is in the channel
     if (!channel.isInChannel(fd))
     {
-        std::string err = "442 " + client.getNickname() + " " + channelName + " :You're not on that channel\r\n";
+        std::string err = ":ircserv 442 " + client.getNickname() + " " + channelName + " :You're not on that channel\r\n";
         send(fd, err.c_str(), err.size(), 0);
         return;
     }
@@ -70,12 +70,12 @@ void Server::topicCommand(int fd, std::string const &message)
     {
         if (channel.getTopic().empty())
         {
-            std::string rpl_notopic = "331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n";
+            std::string rpl_notopic = ":ircserv 331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n";
             send(fd, rpl_notopic.c_str(), rpl_notopic.size(), 0);
         }
         else
         {
-            std::string rpl_topic = "332 " + client.getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n";
+            std::string rpl_topic = ":ircserv 332 " + client.getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n";
             send(fd, rpl_topic.c_str(), rpl_topic.size(), 0);
         }
 
@@ -102,6 +102,6 @@ void Server::topicCommand(int fd, std::string const &message)
     channel.broadcastToChannel(topicChangedMessage);
 
     // Notify client about the topic update
-    std::string rpl_topicset = "332 " + client.getNickname() + " " + channelName + " :" + topic + "\r\n";
+    std::string rpl_topicset = ":ircserv 332 " + client.getNickname() + " " + channelName + " :" + topic + "\r\n";
     send(fd, rpl_topicset.c_str(), rpl_topicset.size(), 0);
 }
