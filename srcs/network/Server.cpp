@@ -387,8 +387,13 @@ void Server::sendWelcome(int fd, Client& client)
 	send(fd, createdMsg.c_str(), createdMsg.size(), 0);
 
 	// 4. RPL_MYINFO (004)
-	std::string myInfoMsg = std::string(YEL) + client.getNickname() + " 004 irssi (" + this->hostname + ") v1.0 " + " " + "oiklt[klo]" + std::string(EN);
+	std::string myInfoMsg = std::string(YEL) + client.getNickname() + " 004 irssi (" + this->hostname + ") v1.0 " + " " + "oiklt[klo]\r\n";
 	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
+
+	// 5. RPL_ISUPPORT (005)
+	std::string isupportMsg = std::string(YEL) + client.getNickname() + " 005 irrsi (" + this->hostname + ") :are supported by this server\r\n";
+	isupportMsg += "CHANTYPES=# PREFIX=(+o+k+t+l+i-o-k-t-l-i) CHANLIMIT=#:100 MODES=4 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
+	send(fd, isupportMsg.c_str(), isupportMsg.size(), 0);
 }
 
 void Server::processNickUser(int fd, const std::string& message)
