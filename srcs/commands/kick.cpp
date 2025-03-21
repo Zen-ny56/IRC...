@@ -1,6 +1,6 @@
 #include "../../include/Server.hpp"
 #include "../../include/Channel.hpp"
-
+#include <cstdio>
 void Server::kickCommand(int fd, const std::string &message)
 {
     // Step 1: Ensure the message starts with "KICK " and remove the prefix

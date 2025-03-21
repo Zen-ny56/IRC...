@@ -51,7 +51,8 @@ int main(int ac, char **av)
         ser.serverInit(port, pass); /*Initialize the server*/
 	}
     catch (const std::exception &e)
-    {	ser.closeFds(); // Close open file descriptors
+    {
+        ser.closeFds(); // Close open file descriptors
         std::cerr << e.what() << std::endl;
 	}
     std::cout << "The Server Closed!" << std::endl;

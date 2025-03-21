@@ -270,8 +270,12 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, 
 	}
 	if (modeBool.find("l") != modeBool.end() && modeBool.at("l"))
 	{
+		
 		modeString += "l";
-		modeArgs += " " + std::to_string(channel.getMax());
+	
+		std::stringstream ss;
+		ss << channel.getMax();  // Convert integer to string
+		modeArgs += " " + ss.str();
 	}
 	// Format response
 	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);

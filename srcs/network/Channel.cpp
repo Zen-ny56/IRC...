@@ -156,9 +156,12 @@ void Channel::addOperator(int fd)
 
 void Channel::removeOperator(int fd)
 {
-	std::vector<int>::iterator it = std::find(operFds.begin(), operFds.end(), fd);
-	if (it != operFds.end())// If foundoper
-		operFds.erase(it);    // Remove from the vector
+	for (std::vector<int>::iterator it = operFds.begin(); it != operFds.end(); ++it)
+	{
+		if (*it == fd)
+		{	operFds.erase(it); break;}
+		
+	}
 }
 
 //Key function
@@ -167,7 +170,9 @@ std::string Channel::getKey(){return this->key;}
 
 void Channel::removeClient(int fd)
 {
-	std::vector<int>::iterator it = std::find(clientFds.begin(), clientFds.end(), fd);
-	if (it != clientFds.end())// If foundoper
-		clientFds.erase(it);    // Remove from the vector
+	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
+	{
+		if (*it == fd)
+		{ clientFds.erase(it); break;}
+	}
 }
