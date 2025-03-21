@@ -201,9 +201,9 @@ void Server::serverInit(int port, std::string pass)
 	this->password = pass;
 	serSocket(); //-> create the server socket
 
-	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
-	std::cout << "Waiting to accept a connection...\n";
-
+	if (!gethostname(this->hostname, sizeof(this->hostname)))
+		std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
+	std::cout << "Listening on " << this->hostname << " on " << this->port << " \r\n";
 	while (Server::signal == false)
 	{ //-> run the server until the signal is received
 
