@@ -202,7 +202,8 @@ void Server::serverInit(int port, std::string pass)
 	serSocket(); //-> create the server socket
 
 	if (!gethostname(this->hostname, sizeof(this->hostname)))
-		std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
+		this->startTime = getCurrentDateTime();
+	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
 	std::cout << "Listening on " << this->hostname << " on " << this->port << " \r\n";
 	while (Server::signal == false)
 	{ //-> run the server until the signal is received
@@ -252,13 +253,13 @@ void Server::validatePassword(int fd, const std::string& message)
 		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
 		if (client.getPassAuthen() == true)
 		{
-			std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + client.getIPadd() + " 462 :You may not reregister\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0);
 			return ;
 		}
 		if (receivedPassword.empty())
 		{
-			std::string errMsg = std::string(RED) + "461 PASS :Not enough parameters\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + client.getIPadd() + " 461 PASS :Not enough parameters\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 			return ;
 		}
@@ -269,7 +270,7 @@ void Server::validatePassword(int fd, const std::string& message)
 		} 
 		else
         {
-			std::string errMsg = std::string(RED) + "464 :Password incorrect\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + client.getIPadd() + " 464 :Password incorrect\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_PASSWDMISMATCH
 			return ;
         }
@@ -285,10 +286,7 @@ void Server::processUser(int fd, const std::string& message)
 		throw std::runtime_error("Client was not found]\n");
 	Client& client = (*this)[it];
 	if (client.getNickAuthen() == false || client.getPassAuthen() == false)
-	{
-		std::cout << RED << "Entering Here" << WHI << std::endl;
 		return ;
-	}
 	std::istringstream iss(message);
 	std::vector<std::string> parts;
 	std::string part;
@@ -297,7 +295,7 @@ void Server::processUser(int fd, const std::string& message)
     // Check minimum parameter count
     if (parts.size() < 5 || parts[0] != "/USER")
 	{
-		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
+		std::string errMsg = std::string(RED) + client.getIPadd() + " 461 USER :Not enough parameters\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
@@ -309,13 +307,13 @@ void Server::processUser(int fd, const std::string& message)
 	// Check if the user is already registered
 	if (client.getUserAuthen() == true)
 	{
-		std::string errMsg = std::string(RED) + "462 :You may not register\r\n" + std::string(WHI);
+		std::string errMsg = std::string(RED) + client.getIPadd() + " 462 :You may not reregister\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_ALREADYREGISTERED
 		return;
 	}
 	if (username.empty() || realname.empty())
 	{
-		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
+		std::string errMsg = std::string(RED) + client.getIPadd() + " 461 USER :Not enough parameters\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
@@ -377,24 +375,25 @@ void Server::sendWelcome(int fd, Client& client)
     std::cout << "\033[1;32m            End of Command List               \033[0m" << std::endl;
     std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
 	// 1. RPL_WELCOME (001)
-	std::string welcomeMsg = std::string(YEL) + ":" + "ircserv" + " 001 " + client.getNickname() + " :Welcome to the IRC Network " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
+	std::string welcomeMsg = std::string(YEL) + client.getNickname() + " 001 :Welcome to the IRC Network, " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
 	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
 
 	// 2. RPL_YOURHOST (002)
-	std::string yourHostMsg = std::string(YEL) + ":" + "ircserv" + " 002 " + client.getNickname() + " :Your host is " + "ircserv" + ", running version 1.0" + "\r\n";
+	std::string yourHostMsg = std::string(YEL) + client.getNickname() + " 002 :Your host is irssi (" + this->hostname + "), running version 1.0" + "\r\n";
 	send(fd, yourHostMsg.c_str(), yourHostMsg.size(), 0);
 
 	// 3. RPL_CREATED (003)
-	std::string createdMsg = std::string(YEL) + ":" + "ircserv" + " 003 " + client.getNickname() + " :This server was created on 01 Jan 2020" + "\r\n";
+	std::string createdMsg = std::string(YEL) +  client.getNickname() + " 003 :This server was created " + this->startTime + "\r\n";
 	send(fd, createdMsg.c_str(), createdMsg.size(), 0);
 
 	// 4. RPL_MYINFO (004)
-	std::string myInfoMsg = std::string(YEL) + ":" + "ircserv" + " 004 " + client.getNickname() + " " + "IRCserv" + " v1.0 :Welcome to IRC Network" + "\r\n" + std::string(WHI);
+	std::string myInfoMsg = std::string(YEL) + client.getNickname() + " 004 irssi (" + this->hostname + ") v1.0 " + " " + "oiklt[klo]" + std::string(EN);
 	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
 }
 
 void Server::processNickUser(int fd, const std::string& message)
 {
+	//Remove nickname from map once client leaves network
 	// NICK command
 	if (message.rfind("/NICK ", 0) == 0)
 	{
@@ -409,19 +408,19 @@ void Server::processNickUser(int fd, const std::string& message)
 		nickname.erase(nickname.find_last_not_of(" \t\r\n") + 1);
 		if (nickname.empty())
 		{
-			std::string errorMsg = std::string(RED) + "431 :No nickname given" + "\r\n" + std::string(WHI);
+			std::string errorMsg = std::string(RED) + client.getIPadd() + " 431 :No nickname given\r\n" + std::string(EN);
             send(fd, errorMsg.c_str(), errorMsg.size(), 0); // ERR_NONICKNAMEGIVEN
 			return;
 		}
 		if (!isValidNickname(nickname))
 		{
-            std::string errorMsg = std::string(RED) + "432 " + nickname + " :Erroneous nickname" + "\r\n" + std::string(WHI); // ERR_ERRONEUSNICKNAME
+            std::string errorMsg = std::string(RED) + client.getIPadd() + " 432 " + nickname + " :Erroneous nickname\r\n" + std::string(EN); // ERR_ERRONEUSNICKNAME
 			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
 			return;
 		}
 		if (nicknameMap.find(nickname) != nicknameMap.end())
 		{
- 			std::string errorMsg = std::string(RED) + "433 " + nickname + " :Nickname is already in use\r\n" + std::string(WHI); // ERR_NICKNAMEINUSE
+ 			std::string errorMsg = std::string(RED) + client.getIPadd() +  " 433 " + nickname + " :Nickname is already in use\r\n" + std::string(EN); // ERR_NICKNAMEINUSE
 			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
 			return;
 		}
@@ -432,7 +431,7 @@ void Server::processNickUser(int fd, const std::string& message)
 			nicknameMap.erase(oldNickname); // Remove old nickname from the map
 		client.setNickname(nickname);
 		nicknameMap[nickname] = fd; // Add the new nickname to the map
-		std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() +  "\r\n" + std::string(WHI); // Inform the client of the nickname change
+		std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() +  "\r\n" + std::string(EN); // Inform the client of the nickname change
 		send(fd, response.c_str(), response.length(), 0);
 		std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
 	}
