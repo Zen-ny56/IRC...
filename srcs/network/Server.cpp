@@ -444,7 +444,7 @@ void Server::processSasl(int fd, const std::string& message)
 	{
 		std::string response = "AUTHENTICATE +\r\n";
 		send(fd, response.c_str(), response.size(), 0);
-    } else if (message.find("AUTHENTICATE ") == 0) {
+    } else if (message.find("/AUTHENTICATE ") == 0) {
 		// Decode and validate credentials
 		std::string credentials = message.substr(13); // Base64-encoded
 		// Decode and verify (requires base64 decoding)
