@@ -164,7 +164,7 @@ void Server::acceptNewClient()
 	cli.setIpAdd(inet_ntoa((cliadd.sin_addr))); //-> convert the ip address to string and set it
 	clients.push_back(cli); //-> add the client to the vector of clients
 	fds.push_back(newPoll); //-> add the client socket to the pollfd
-
+	
 	// authenticatedClients[incofd] = false;
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
@@ -225,36 +225,52 @@ void Server::serverInit(int port, std::string pass)
 
 void Server::sendCapabilities(int fd)
 {
-	std::string capMessage = "CAP * LS :multi-prefix sasl\r\n";
+	std::string capMessage = "CAP * LS :sasl\r\n";
 	send(fd, capMessage.c_str(), capMessage.size(), 0);
 	return ;
 }
 
 void Server::processCapReq(int fd, const std::string& message)
 {
-	if (message.find("CAP REQ") != std::string::npos){
-		std::string capAck = "CAP * ACK :multi-prefix sasl\r\n";
-		send(fd, capAck.c_str(), capAck.size(), 0);
-		return ;
-	}
+	if (message.find("CAP REQ") != std::string::npos)
+    {
+        if (message.find("multi-prefix") != std::string::npos)
+        {
+            std::string capNak = "CAP * NAK :multi-prefix\r\n"; // Reject multi-prefix
+            send(fd, capNak.c_str(), capNak.size(), 0);
+            return;
+        }
+        if (message.find("sasl") != std::string::npos)
+        {
+            std::string capAck = "CAP * ACK :sasl\r\n"; // Only acknowledge SASL
+            send(fd, capAck.c_str(), capAck.size(), 0);
+        }
+    }
 }
 
 void Server::validatePassword(int fd, const std::string& message)
 {
+	std::vector<Client>::iterator it = getClient(fd);
+	if (it == clients.end())
+		throw std::runtime_error("No client was found\n");
+	Client& client = (*this)[it];
+	if (!client.ifAuthenticated())
+		return ;
+	std::map<std::string, bool>& aMap = client.getFaceOutheDirt();
 	if (message.rfind("/PASS", 0) == 0)
 	{ // Check if message starts with "PASS"
-		std::vector<Client>::iterator it = getClient(fd);
-		if (it == clients.end())
-			throw std::runtime_error("No client was found\n");
-		Client& client = (*this)[it];
 		std::string receivedPassword = message.substr(5); // Extract password
 		receivedPassword.erase(0, receivedPassword.find_first_not_of(" \t\r\n")); // Remove leading whitespace
 		receivedPassword.erase(receivedPassword.find_last_not_of(" \t\r\n") + 1); // Remove trailing whitespace
-		if (client.getPassAuthen() == true)
+		std::map<std::string, bool>::iterator bt = aMap.find("pass");
+		if (bt != aMap.end())
 		{
-			std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n" + std::string(WHI);
-			send(fd, errMsg.c_str(), errMsg.size(), 0);
-			return ;
+			if (bt->second == true)
+			{
+				std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n" + std::string(WHI);
+				send(fd, errMsg.c_str(), errMsg.size(), 0);
+				return ;
+			}
 		}
 		if (receivedPassword.empty())
 		{
@@ -262,9 +278,9 @@ void Server::validatePassword(int fd, const std::string& message)
 			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 			return ;
 		}
-		if (receivedPassword.compare(this->password) == 0)
+		if (!receivedPassword.compare(this->password))
 		{
-			client.setPassAuthen();
+			bt->second = true;
 			return ; // Authentication successful
 		} 
 		else
@@ -284,11 +300,9 @@ void Server::processUser(int fd, const std::string& message)
 	if (it == clients.end())
 		throw std::runtime_error("Client was not found]\n");
 	Client& client = (*this)[it];
-	if (client.getNickAuthen() == false || client.getPassAuthen() == false)
-	{
-		std::cout << RED << "Entering Here" << WHI << std::endl;
+	if (!client.ifAuthenticated())
 		return ;
-	}
+	std::map<std::string, bool>& aMap = client.getFaceOutheDirt();
 	std::istringstream iss(message);
 	std::vector<std::string> parts;
 	std::string part;
@@ -305,15 +319,20 @@ void Server::processUser(int fd, const std::string& message)
 	std::string unused1 = parts[2]; // This is usually "0"
 	std::string unused2 = parts[3]; // This is usually "*"
 	std::string realname = message.substr(message.find(':') + 1);
+	
 
 	// Check if the user is already registered
-	if (client.getUserAuthen() == true)
+	std::map<std::string, bool>::iterator bt = aMap.find("user");
+	if (bt != aMap.end())
 	{
-		std::string errMsg = std::string(RED) + "462 :You may not register\r\n" + std::string(WHI);
-		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_ALREADYREGISTERED
-		return;
+		if (bt->second == true)
+		{
+			std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n" + std::string(WHI);
+			send(fd, errMsg.c_str(), errMsg.size(), 0);
+			return ;
+		}
 	}
-	if (username.empty() || realname.empty())
+	if (username.empty() || realname.empty() || isValidNickname(realname) == false || isValidNickname(username) == false)
 	{
 		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
@@ -403,14 +422,14 @@ void Server::sendWelcome(int fd, Client& client)
 void Server::processNickUser(int fd, const std::string& message)
 {
 	// NICK command
+	std::vector<Client>::iterator it = getClient(fd);
+	if (it == clients.end())
+		throw  std::runtime_error("Client was not found\n");
+	Client& client = (*this)[it];
+	if (!client.ifAuthenticated())
+		return ;
 	if (message.rfind("/NICK ", 0) == 0)
 	{
-		std::vector<Client>::iterator it = getClient(fd);
-		if (it == clients.end())
-			throw  std::runtime_error("Client was not found\n");
-		Client& client = (*this)[it];
-		if (client.getPassAuthen() == false || client.getNickAuthen() == true)
-			return;
 		std::string nickname = message.substr(5); // Extract nickname
 		nickname.erase(0, nickname.find_first_not_of(" \t\r\n"));
 		nickname.erase(nickname.find_last_not_of(" \t\r\n") + 1);
@@ -432,8 +451,6 @@ void Server::processNickUser(int fd, const std::string& message)
 			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
 			return;
 		}
-		// Update client's nickname
-		// Client& client = getClient(fd);
 		std::string oldNickname = client.getNickname();
 		if (!oldNickname.empty())
 			nicknameMap.erase(oldNickname); // Remove old nickname from the map
@@ -447,17 +464,42 @@ void Server::processNickUser(int fd, const std::string& message)
 
 void Server::processSasl(int fd, const std::string& message)
 {
-	if (message.find("/AUTHENTICATE PLAIN") != std::string::npos)
-	{
-		std::string response = "AUTHENTICATE +\r\n";
-		send(fd, response.c_str(), response.size(), 0);
-    } else if (message.find("/AUTHENTICATE ") == 0) {
-		// Decode and validate credentials
-		std::string credentials = message.substr(13); // Base64-encoded
-		// Decode and verify (requires base64 decoding)
-		// Example: Validate "username\0username\0password"
-		send(fd, "900 :Authentication successful\r\n", 33, 0);
-	}
+    if (message.find("AUTHENTICATE PLAIN") != std::string::npos)
+    {
+        // Step 1: Tell client to send credentials
+        std::string response = "AUTHENTICATE +\r\n";
+        send(fd, response.c_str(), response.size(), 0);
+        return;
+    }
+    else if (message.find("AUTHENTICATE ") == 0)
+    {
+        // Step 2: Extract Base64-encoded credentials
+        std::string encoded_credentials = message.substr(13); // Skip "AUTHENTICATE "
+
+        // Step 3: Decode Base64
+        std::string decoded = base64_decode(encoded_credentials);
+
+        // Step 4: Split decoded string into username and password
+        std::istringstream ss(decoded);
+		std::string username, auth_username, password;
+        std::getline(ss, username, '\0');
+        std::getline(ss, auth_username, '\0');
+        std::getline(ss, password, '\0');
+
+        // Step 5: Validate credentials (Assume username = "user", password = "pass")
+        if (!username.empty() && password.compare(this->password))
+		{
+            send(fd, "900 :Authentication successful\r\n", 33, 0);
+			std::vector<Client>::iterator it = getClient(fd);
+			if (it == clients.end())
+				throw std::runtime_error("Client was not found]\n");
+			Client& client = (*this)[it];
+			client.setNickname(username);
+			client.setUserName(username, username);
+		}
+		else
+            send(fd, "904 :Authentication failed\r\n", 29, 0);
+    }
 }
 
 void Server::capEnd(int fd)
@@ -540,8 +582,8 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	if (iter == clients.end())
 		throw std::runtime_error("Error finding client\n");
 	Client& client = (*this)[iter];
-	if (client.getUserAuthen() == false)
-		return ;
+	// if (client.getUserAuthen() == false)
+	// 	return ;
 	std::map<std::string, Channel>::iterator it = channels.find(channelName);
 	if (it == channels.end())
 	{
@@ -559,12 +601,12 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	// 	send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 	// 	return;
     // }
-	if (channel.isInviteOnly() && !channel.isInvitedUser(fd))
-	{
-		std::string errorMsg = std::string(RED) + "473 " + client.getNickname() + " " + channelName + " :Invite-only channel\r\n" + std::string(WHI);
-		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-		return;
-    }
+	// if (channel.isInviteOnly() && !channel.isInvitedUser(fd))
+	// {
+	// 	std::string errorMsg = std::string(RED) + "473 " + client.getNickname() + " " + channelName + " :Invite-only channel\r\n" + std::string(WHI);
+	// 	send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+	// 	return;
+    // }
     if (channel.isFull())
 	{
 		std::string errorMsg = std::string(RED) + client.getNickname() + " " + channelName + " :Channel is full\r\n" + std::string(WHI);
@@ -590,7 +632,7 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	// 5. Broadcast JOIN message to all clients in the channel
 	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(WHI);
 	channel.broadcastToChannel(joinMessage);
-	channel.removeClientFromInvitation(fd); 
+	// channel.removeClientFromInvitation(fd); 
     // 6. Send the channel topic (or indicate no topic set)
     if (!channel.getTopic().empty())
 	{
@@ -721,7 +763,7 @@ std::vector<Client>::iterator Server::getClientUsingNickname(const std::string& 
 	for (std::vector<Client>::iterator it = clients.begin(); it != clients.end(); ++it)
 	{
 		std::string clientsNick = it->getNickname();
-		if (clientsNick.compare(nickname) == 0)
+		if (!clientsNick.compare(nickname))
 			return it;
 	}
 	return (clients.end());
@@ -751,4 +793,67 @@ int stringToInt(const std::string &str)
 	int number;
 	ss >> number; // Convert string to integer
 	return number;
+}
+
+
+const char Server::BASE64_CHARS[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789+/";
+
+// Helper function to check if a character is Base64
+bool Server::is_base64(unsigned char c) {
+    return (isalnum(c) || (c == '+') || (c == '/'));
+}
+
+// Base64 decoding function
+std::string Server::base64_decode(const std::string &encoded_string)
+{
+    int in_len = encoded_string.size();
+    int i = 0, j = 0, in_ = 0;
+    unsigned char char_array_4[4], char_array_3[3];
+    std::string decoded;
+
+    while (in_len-- && (encoded_string[in_] != '=') && is_base64(encoded_string[in_]))
+    {
+        char_array_4[i++] = encoded_string[in_]; 
+        in_++;
+
+        if (i == 4)
+        {
+            for (i = 0; i < 4; i++)
+                char_array_4[i] = static_cast<unsigned char>(
+                    std::strchr(BASE64_CHARS, char_array_4[i]) - BASE64_CHARS
+                );
+
+            char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+            char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+            char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+            for (i = 0; (i < 3); i++)
+                decoded += char_array_3[i];
+            
+            i = 0;
+        }
+    }
+
+    if (i)
+    {
+        for (j = i; j < 4; j++)
+            char_array_4[j] = 0;
+
+        for (j = 0; j < 4; j++)
+            char_array_4[j] = static_cast<unsigned char>(
+                std::strchr(BASE64_CHARS, char_array_4[j]) - BASE64_CHARS
+            );
+
+        char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+        char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+        char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+        for (j = 0; (j < i - 1); j++)
+            decoded += char_array_3[j];
+    }
+
+    return decoded;
 }

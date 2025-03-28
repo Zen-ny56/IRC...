@@ -48,4 +48,5 @@ class Channel
 		void setTopRes(bool condition);
 		bool getTopRes();
 		void removeClient(int fd); // Add remove Client
+		// void removeClientFromInvitation(int fd);
 };

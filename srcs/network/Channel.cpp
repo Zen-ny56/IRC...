@@ -77,31 +77,31 @@ int Channel::isInvited(int fd)
 	return 0;
 }
 
-void Channel::addToInvitation(int fd){
-	_invitationLists.push_back(fd);
-}
+// void Channel::addToInvitation(int fd){
+// 	_invitationLists.push_back(fd);
+// }
 
-bool Channel::isInvitedUser(int fd)
-{
-	for (std::vector<int>::iterator it = _invitationLists.begin(); it != _invitationLists.end(); ++it)
-	{
-		if (*it == fd)
-			return true;
-	}
-	return false;
-}
+// bool Channel::isInvitedUser(int fd)
+// {
+// 	for (std::vector<int>::iterator it = _invitationLists.begin(); it != _invitationLists.end(); ++it)
+// 	{
+// 		if (*it == fd)
+// 			return true;
+// 	}
+// 	return false;
+// }
 
-void Channel::removeClientFromInvitation(int fd)
-{
-    for (std::vector<int>::iterator it = _invitationLists.begin(); it != _invitationLists.end(); ++it)
-    {
-        if (*it == fd)
-        {
-            _invitationLists.erase(it);
-            break;
-        }
-    }
-}
+// void Channel::removeClientFromInvitation(int fd)
+// {
+//     for (std::vector<int>::iterator it = _invitationLists.begin(); it != _invitationLists.end(); ++it)
+//     {
+//         if (*it == fd)
+//         {
+//             _invitationLists.erase(it);
+//             break;
+//         }
+//     }
+// }
 
 int Channel::isBanned(const std::string& nickName)
 {
