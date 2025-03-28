@@ -332,7 +332,7 @@ void Server::processUser(int fd, const std::string& message)
 			return ;
 		}
 	}
-	if (username.empty() || realname.empty() || isValidNickname(realname) == false || isValidNickname(username) == false)
+	if (username.empty() || realname.empty() || isValidNickname(username) == false)
 	{
 		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
@@ -341,7 +341,7 @@ void Server::processUser(int fd, const std::string& message)
 	// Register the user
 	client.setUserName(username, realname);
 	// Log successful processing
-	this->sendWelcome(fd, client);
+	// this->sendWelcome(fd, client);
 }
 
 void Server::sendWelcome(int fd, Client& client)
@@ -464,6 +464,13 @@ void Server::processNickUser(int fd, const std::string& message)
 
 void Server::processSasl(int fd, const std::string& message)
 {
+	std::vector<Client>::iterator it = getClient(fd);
+	if (it == clients.end())
+		throw std::runtime_error("No client was found\n");
+	Client& client = (*this)[it];
+	if (!client.ifAuthenticated())
+		return ;
+	std::map<std::string, bool>& aMap = client.getFaceOutheDirt();
     if (message.find("AUTHENTICATE PLAIN") != std::string::npos)
     {
         // Step 1: Tell client to send credentials
@@ -490,12 +497,10 @@ void Server::processSasl(int fd, const std::string& message)
         if (!username.empty() && password.compare(this->password))
 		{
             send(fd, "900 :Authentication successful\r\n", 33, 0);
-			std::vector<Client>::iterator it = getClient(fd);
-			if (it == clients.end())
-				throw std::runtime_error("Client was not found]\n");
-			Client& client = (*this)[it];
 			client.setNickname(username);
 			client.setUserName(username, username);
+			std::map<std::string, bool>::iterator bt = aMap.find("pass");
+			bt->second = true;
 		}
 		else
             send(fd, "904 :Authentication failed\r\n", 29, 0);
