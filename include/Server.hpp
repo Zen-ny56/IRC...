@@ -41,7 +41,7 @@ class Server //-> class for server
         std::vector<struct pollfd> fds; //-> vector of pollfd
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
-
+        
     public:
         Server(); //-> default constructor
         void serverInit(int port, std::string pass); //-> server initialization

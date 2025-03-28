@@ -18,6 +18,7 @@ class Channel
 		std::vector<int> clientFds; //Client's fds of who are presently in the channel	
 		std::map<int, bool> _isInvited; // Key = Clients fd; Value = Whether client isInvited in the  channel;
 		std::vector<std::string> _isBanned; // Vector of nicknames of clients who are banned
+		std::vector<int> _invitationLists; //for every invite adding users to invitation lists
 	public:
 		Channel();
 		Channel(const std::string& channelName, const std::string& key, int fd);
@@ -31,6 +32,7 @@ class Channel
 		int getMax();
 		int isFull();
 		int isInvited(int fd);
+		bool isInvitedUser(int fd);
 		int isBanned(const std::string& nickName);
 		int isInChannel(int fd);
 		void broadcastToChannel(const std::string& joinMessage);
@@ -47,5 +49,7 @@ class Channel
 		void setInviteOnly(bool condition);
 		void setTopRes(bool condition);
 		bool getTopRes();
-		void removeClient(int fd); // Add remove Client
+		void removeClient(int fd);
+		void addToInvitation(int fd);
+		void removeClientFromInvitation(int fd);
 };
