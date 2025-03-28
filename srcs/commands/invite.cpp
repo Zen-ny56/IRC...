@@ -66,6 +66,7 @@ void Server::inviteCommand(int fd, std::string const &message)
         	// Send INVITE message to the target user
 			std::string inviteMessage =  nickName + " INVITED " + " to " + channelName + "\r\n";
             send(targetFd, inviteMessage.c_str(), inviteMessage.size(), 0);
+            channel.addToInvitation(targetFd);
 		}
     }
 }

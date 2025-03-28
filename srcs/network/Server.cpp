@@ -328,54 +328,61 @@ void Server::processUser(int fd, const std::string& message)
 void Server::sendWelcome(int fd, Client& client)
 {
 	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
-    std::cout << "\033[1;32m          IRC Command List and Format        \033[0m" << std::endl;
-    std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
+	std::cout << "\033[1;32m          IRC Command List and Format        \033[0m" << std::endl;
+	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/CAP LS  | \033[1;37m /CAP LS\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/CAP LS  | \033[1;37m /CAP LS\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/PASS    | \033[1;37m /PASS <password>\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/PASS    | \033[1;37m <password>\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/NICK    | \033[1;37m /NICK <nickname>\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/NICK    | \033[1;37m <nickname>\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/USER    | \033[1;37m /USER <username> <hostname> <servername> <realname>\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/USER    | \033[1;37m <username> <hostname> <servername> <realname>\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/INVITE  | \033[1;37m /INVITE <nickname> <channel>\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/INVITE  | \033[1;37m <nickname> <channel>\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/KICK    | \033[1;37m /KICK <channel> <nickname> [<reason>]\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/KICK    | \033[1;37m <channel> <nickname> [<reason>]\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/TOPIC   | \033[1;37m /TOPIC <channel> [<topic>]\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/TOPIC   | \033[1;37m <channel> [<topic>]\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/CAP REQ | \033[1;37m /CAP REQ <capability>\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/CAP REQ | \033[1;37m <capability>\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/QUIT    | \033[1;37m /QUIT [<message>]\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/QUIT    | \033[1;37m [<message>]\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/JOIN    | \033[1;37m /JOIN <channel> [<key>]\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/JOIN    | \033[1;37m <channel> [<key>]\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/PRIVMSG | \033[1;37m /PRIVMSG <target> <message>\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/PRIVMSG | \033[1;37m <target> <message>\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/AUTHENTICATE | \033[1;37m /AUTHENTICATE <data>\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/AUTHENTICATE | \033[1;37m <data>\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/CAP END | \033[1;37m /CAP END\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/CAP END | \033[1;37m /CAP END\033[0m" << std::endl;
 
-    std::cout << "\033[1;33m* \033[0m";
-    std::cout << "/MODE    | \033[1;37m /MODE <target> <mode>\033[0m" << std::endl;
+	std::cout << "\033[1;33m* \033[0m";
+	std::cout << "/MODE    | \033[1;37m <target> <mode>\033[0m" << std::endl;
+	std::cout << "\033[1;37m  Available modes:\033[0m" << std::endl;
+	std::cout << "\033[1;36m    i\033[0m - \033[1;37mSet/remove Invite-only channel\033[0m" << std::endl;
+	std::cout << "\033[1;36m    t\033[0m - \033[1;37mSet/remove the restrictions of the TOPIC command to channel operators\033[0m" << std::endl;
+	std::cout << "\033[1;36m    k\033[0m - \033[1;37mSet/remove the channel key (password)\033[0m" << std::endl;
+	std::cout << "\033[1;36m    o\033[0m - \033[1;37mGive/take channel operator privilege\033[0m" << std::endl;
+	std::cout << "\033[1;36m    l\033[0m - \033[1;37mSet/remove the user limit to channel\033[0m" << std::endl;
 
-    std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
-    std::cout << "\033[1;32m            End of Command List               \033[0m" << std::endl;
-    std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
+	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
+	std::cout << "\033[1;32m            End of Command List               \033[0m" << std::endl;
+	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
+
 	// 1. RPL_WELCOME (001)
 	std::string welcomeMsg = std::string(YEL) + ":" + "ircserv" + " 001 " + client.getNickname() + " :Welcome to the IRC Network " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
 	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
@@ -546,7 +553,13 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	if (channel.isInChannel(fd))
 		return ;
     // 3. Validate conditions for joining the channel
-	if (channel.isInviteOnly() && !channel.isInvited(fd))
+	// if (channel.isInviteOnly() && !channel.isInvited(fd))
+	// {
+	// 	std::string errorMsg = std::string(RED) + "473 " + client.getNickname() + " " + channelName + " :Invite-only channel\r\n" + std::string(WHI);
+	// 	send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+	// 	return;
+    // }
+	if (channel.isInviteOnly() && !channel.isInvitedUser(fd))
 	{
 		std::string errorMsg = std::string(RED) + "473 " + client.getNickname() + " " + channelName + " :Invite-only channel\r\n" + std::string(WHI);
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
@@ -577,7 +590,7 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	// 5. Broadcast JOIN message to all clients in the channel
 	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(WHI);
 	channel.broadcastToChannel(joinMessage);
-
+	channel.removeClientFromInvitation(fd); 
     // 6. Send the channel topic (or indicate no topic set)
     if (!channel.getTopic().empty())
 	{
