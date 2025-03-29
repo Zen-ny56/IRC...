@@ -267,14 +267,14 @@ void Server::validatePassword(int fd, const std::string& message)
 		{
 			if (bt->second == true)
 			{
-				std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n" + std::string(WHI);
+				std::string errMsg = std::string(RED) + ":" + this->hostname + " 462 " + client.getIPadd() + " :You may not reregister\r\n" + std::string(EN);
 				send(fd, errMsg.c_str(), errMsg.size(), 0);
 				return ;
 			}
 		}
 		if (receivedPassword.empty())
 		{
-			std::string errMsg = std::string(RED) + "461 PASS :Not enough parameters\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " PASS :Not enough parameters\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 			return ;
 		}
@@ -285,7 +285,7 @@ void Server::validatePassword(int fd, const std::string& message)
 		} 
 		else
         {
-			std::string errMsg = std::string(RED) + "464 :Password incorrect\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + ":" + this->hostname + " 464 " + client.getIPadd() + " :Password incorrect\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_PASSWDMISMATCH
 			return ;
         }
@@ -311,7 +311,7 @@ void Server::processUser(int fd, const std::string& message)
     // Check minimum parameter count
     if (parts.size() < 5 || parts[0] != "/USER")
 	{
-		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
+		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
@@ -327,14 +327,14 @@ void Server::processUser(int fd, const std::string& message)
 	{
 		if (bt->second == true)
 		{
-			std::string errMsg = std::string(RED) + "462 PASS: You may not register\r\n" + std::string(WHI);
+			std::string errMsg = std::string(RED) + ":" + this->hostname + " 462 " + client.getIPadd() + " :You may not reregister\r\n" + std::string(EN);
 			send(fd, errMsg.c_str(), errMsg.size(), 0);
 			return ;
 		}
 	}
 	if (username.empty() || realname.empty() || isValidNickname(username) == false)
 	{
-		std::string errMsg = std::string(RED) +  "461 USER :Not enough parameters\r\n" + std::string(WHI);
+		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
@@ -403,20 +403,25 @@ void Server::sendWelcome(int fd, Client& client)
 	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
 
 	// 1. RPL_WELCOME (001)
-	std::string welcomeMsg = std::string(YEL) + ":" + "ircserv" + " 001 " + client.getNickname() + " :Welcome to the IRC Network " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
+	std::string welcomeMsg = std::string(YEL) + ":" + this->hostname + " 001 " +  client.getNickname() + " :Welcome to the IRC Network, " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
 	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
 
 	// 2. RPL_YOURHOST (002)
-	std::string yourHostMsg = std::string(YEL) + ":" + "ircserv" + " 002 " + client.getNickname() + " :Your host is " + "ircserv" + ", running version 1.0" + "\r\n";
+	std::string yourHostMsg = std::string(YEL) + ":" + this->hostname + " 002 " +  client.getNickname() + " :Your host is irssi (" + this->hostname + "), running version 1.0" + "\r\n";
 	send(fd, yourHostMsg.c_str(), yourHostMsg.size(), 0);
 
 	// 3. RPL_CREATED (003)
-	std::string createdMsg = std::string(YEL) + ":" + "ircserv" + " 003 " + client.getNickname() + " :This server was created on 01 Jan 2020" + "\r\n";
+	std::string createdMsg = std::string(YEL) + ":" + this->hostname + " 003 " + client.getNickname() + " :This server was created " + this->startTime + "\r\n";
 	send(fd, createdMsg.c_str(), createdMsg.size(), 0);
 
 	// 4. RPL_MYINFO (004)
-	std::string myInfoMsg = std::string(YEL) + ":" + "ircserv" + " 004 " + client.getNickname() + " " + "IRCserv" + " v1.0 :Welcome to IRC Network" + "\r\n" + std::string(WHI);
+	std::string myInfoMsg = std::string(YEL) + ":" + this->hostname + " 004 " + client.getNickname() + " irssi (" + this->hostname + ") v1.0 " + " " + "oiklt[klo]\r\n";
 	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
+
+	// 5. RPL_ISUPPORT (005)
+	std::string isupportMsg = std::string(YEL) + ":" + this->hostname + " 005 " + client.getNickname() + " irrsi (" + this->hostname + ") :are supported by this server\r\n";
+	isupportMsg += "CHANTYPES=# PREFIX=(+o+k+t+l+i-o-k-t-l-i) CHANLIMIT=#:100 MODES=4 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
+	send(fd, isupportMsg.c_str(), isupportMsg.size(), 0);
 }
 
 void Server::processNickUser(int fd, const std::string& message)
@@ -435,19 +440,19 @@ void Server::processNickUser(int fd, const std::string& message)
 		nickname.erase(nickname.find_last_not_of(" \t\r\n") + 1);
 		if (nickname.empty())
 		{
-			std::string errorMsg = std::string(RED) + "431 :No nickname given" + "\r\n" + std::string(WHI);
+			std::string errorMsg = std::string(RED) + ":" + this->hostname + " 431 " + client.getIPadd() + " :No nickname given\r\n" + std::string(EN);
             send(fd, errorMsg.c_str(), errorMsg.size(), 0); // ERR_NONICKNAMEGIVEN
 			return;
 		}
 		if (!isValidNickname(nickname))
 		{
-            std::string errorMsg = std::string(RED) + "432 " + nickname + " :Erroneous nickname" + "\r\n" + std::string(WHI); // ERR_ERRONEUSNICKNAME
+            std::string errorMsg = std::string(RED) + ":" + this->hostname + " 432 " + client.getIPadd() + " " + nickname + " :Erroneous nickname\r\n" + std::string(EN); // ERR_ERRONEUSNICKNAME
 			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
 			return;
 		}
 		if (nicknameMap.find(nickname) != nicknameMap.end())
 		{
- 			std::string errorMsg = std::string(RED) + "433 " + nickname + " :Nickname is already in use\r\n" + std::string(WHI); // ERR_NICKNAMEINUSE
+			std::string errorMsg = std::string(RED) + ":" + this->hostname + " 433 " + client.getIPadd() +  " " + nickname + " :Nickname is already in use\r\n" + std::string(EN); // ERR_NICKNAMEINUSE
 			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
 			return;
 		}
@@ -471,14 +476,14 @@ void Server::processSasl(int fd, const std::string& message)
 	if (!client.ifAuthenticated())
 		return ;
 	std::map<std::string, bool>& aMap = client.getFaceOutheDirt();
-    if (message.find("AUTHENTICATE PLAIN") != std::string::npos)
+    if (message.find("/AUTHENTICATE PLAIN") != std::string::npos)
     {
         // Step 1: Tell client to send credentials
         std::string response = "AUTHENTICATE +\r\n";
         send(fd, response.c_str(), response.size(), 0);
         return;
     }
-    else if (message.find("AUTHENTICATE ") == 0)
+    else if (message.find("/AUTHENTICATE ") == 0)
     {
         // Step 2: Extract Base64-encoded credentials
         std::string encoded_credentials = message.substr(13); // Skip "AUTHENTICATE "
@@ -496,14 +501,18 @@ void Server::processSasl(int fd, const std::string& message)
         // Step 5: Validate credentials (Assume username = "user", password = "pass")
         if (!username.empty() && password.compare(this->password))
 		{
-            send(fd, "900 :Authentication successful\r\n", 33, 0);
 			client.setNickname(username);
 			client.setUserName(username, username);
+			std::string msg = std::string(GRE) + ":" + this->hostname + " 900 " + client.getIPadd() + " " + client.getNickname() + "!" + client.getUserName() + "@" + this->hostname + client.getUserName() + "_account" + " :You are now logged in as " + client.getUserName() + "\r\n" + std::string(EN);
+            send(fd, msg.c_str(), msg.size(), 0);
 			std::map<std::string, bool>::iterator bt = aMap.find("pass");
 			bt->second = true;
 		}
 		else
-            send(fd, "904 :Authentication failed\r\n", 29, 0);
+		{
+			std::string msg = std::string(RED) + ":" + this->hostname + " 904 " + client.getIPadd() + " :SASL authentication successful\r\n" + std::string(EN);
+            send(fd, msg.c_str(), msg.size(), 0);
+		}
     }
 }
 
@@ -548,11 +557,15 @@ bool Server::isValidNickname(const std::string& nickname)
 
 void Server::handleChannel(int fd, const std::string& message)
 {
+	std::vector<Client>::iterator it = getClient(fd);
+	if (it == clients.end())
+		throw std::runtime_error("No client was found\n");
+	Client& client = (*this)[it];
 	//Extract parameters after JOIN , client is going to send JOIN #channel1,#channel2 key1,key2 or JOIN #channel1
 	size_t paramsStart = message.find(' ') + 1;
     if (paramsStart == std::string::npos || paramsStart >= message.length())
 	{
-		std::string errormsg = std::string(RED) + "461 JOIN :Not enough parameters\r\n";
+		std::string errormsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getNickname() + " JOIN :Not enough parameters\r\n" + std::string(EN);
 		send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
@@ -572,7 +585,7 @@ void Server::handleChannel(int fd, const std::string& message)
 		const std::string& key = (i < keys.size()) ? keys[i] : ""; // Match keys to channels if possible
         if (!isValidChannelName(channelName))
 		{
-			std::string errormsg = std::string(RED) + "476 " + channelName + " :Invalid channel name\r\n";
+			std::string errormsg = std::string(RED) + ":" + this->hostname + " 476 " + channelName + " :Bad Channel Mask\r\n";
 			send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_BADCHANMASK
 			continue;
 		}
@@ -599,52 +612,45 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 	Channel& channel = it->second;
 	if (channel.isInChannel(fd))
 		return ;
-    // 3. Validate conditions for joining the channel
-	// if (channel.isInviteOnly() && !channel.isInvited(fd))
-	// {
-	// 	std::string errorMsg = std::string(RED) + "473 " + client.getNickname() + " " + channelName + " :Invite-only channel\r\n" + std::string(WHI);
-	// 	send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-	// 	return;
-    // }
-	// if (channel.isInviteOnly() && !channel.isInvitedUser(fd))
-	// {
-	// 	std::string errorMsg = std::string(RED) + "473 " + client.getNickname() + " " + channelName + " :Invite-only channel\r\n" + std::string(WHI);
-	// 	send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-	// 	return;
-    // }
+	if (channel.isInviteOnly() && !channel.isInvitedUser(fd))
+	{
+		std::string errorMsg = std::string(RED) + ":" + this->hostname +  " 473 " + client.getNickname() + " " + channelName + " :Cannot join channel (+i)\r\n" + std::string(EN);
+		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+		return;
+    }
     if (channel.isFull())
 	{
-		std::string errorMsg = std::string(RED) + client.getNickname() + " " + channelName + " :Channel is full\r\n" + std::string(WHI);
+		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 471 " + client.getNickname() + " " + channelName + " :Cannot join channel (+l)\r\n" + std::string(EN);
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 		return;
 	}
 	if (!channel.getKey().empty() && channel.getKey() != key)
 	{
-		std::string errorMsg = std::string(RED) + "475 " + client.getNickname() + " " + channelName + " :Cannot join channel (+k)\r\n" + std::string(WHI);
+		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 475 " + client.getNickname() + " " + channelName + " :Cannot join channel (+k)\r\n" + std::string(WHI);
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 		return;
     }
-	if (channel.isBanned(client.getNickname()))
-	{
-		std::string errorMsg = std::string(RED) + "474" + client.getNickname() + " :You are banned from this channel\r\n" + std::string(WHI);
-        send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-        return;
-    }
+	// if (channel.isBanned(client.getNickname()))
+	// {
+	// 	std::string errorMsg = std::string(RED) + "474" + client.getNickname() + " :You are banned from this channel\r\n" + std::string(WHI);
+    //     send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+    //     return;
+    // }
 
 	// 4. Add the client to the channel
 	channel.addClient(fd);
 	std::cout << channel.getKey() << std::endl;
 	// 5. Broadcast JOIN message to all clients in the channel
-	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(WHI);
+	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(EN);
 	channel.broadcastToChannel(joinMessage);
 	// channel.removeClientFromInvitation(fd); 
     // 6. Send the channel topic (or indicate no topic set)
     if (!channel.getTopic().empty())
 	{
-		std::string info = std::string(YEL) + "332 " + client.getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n" + std::string(WHI);
+		std::string info = std::string(YEL) + ":" + this->hostname + " 332 " + client.getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n" + std::string(EN);
 		send(fd, info.c_str() ,info.size(), 0);
 	} else {
-		std::string info = std::string(YEL) + "331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n" + std::string(WHI);
+		std::string info = std::string(YEL) + ":"  +  this->hostname + " 331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n" + std::string(EN);
 		send(fd, info.c_str(), info.size(), 0);
     }
 
@@ -656,7 +662,7 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 		if (bt == clients.end())
 			throw std::runtime_error("Error finding clients\n");
 		Client& user = (*this)[bt];
-		std::string msg = std::string(YEL) + "353 " + client.getNickname() + " = " + channelName + " :" +  user.getNickname() + "\r\n" + std::string(WHI);
+		std::string msg = std::string(YEL) + ":" + this->hostname + " 353 " + client.getNickname() + " = " + channelName + " :" + (user.isOperator() ? "@" : "") + user.getNickname() + "\r\n" + std::string(WHI);
 		send(fd, msg.c_str(), msg.size(), 0); 
 	}
 	std::string msg = std::string(YEL) + "366 " + client.getNickname() + " " + channelName + " :End of /Names list\r\n" + std::string(WHI);
