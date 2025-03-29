@@ -3,7 +3,6 @@
 #include <cstdio>
 void Server::kickCommand(int fd, const std::string &message)
 {
-    // Step 1: Ensure the message starts with "KICK " and remove the prefix
     if (message.rfind("/KICK ", 0) == 0)
     {
         std::vector<Client>::iterator it = getClient(fd);
@@ -11,14 +10,11 @@ void Server::kickCommand(int fd, const std::string &message)
             throw std::runtime_error("Client was not found\n");
         Client &client = (*this)[it];
 
-        // Remove the "KICK " prefix to avoid confusion with channel name
         std::string trimmedMessage = message.substr(5);
 
-        // Step 2: Parse the remaining message
-        std::istringstream iss(trimmedMessage); // Now start parsing after "KICK "
+        std::istringstream iss(trimmedMessage);
         std::string channelName, user, comment;
 
-        // Try to extract the channel name
         iss >> channelName;
         if (channelName.empty())
         {
@@ -27,35 +23,26 @@ void Server::kickCommand(int fd, const std::string &message)
             return;
         }
 
-        // Step 3: Parse users (comma-separated)
         std::vector<std::string> users;
         std::string temp;
         while (iss >> temp)
         {
-            // Split by commas if there are multiple users
             std::size_t commaPos = temp.find(',');
             if (commaPos != std::string::npos)
             {
-                // Add the part before the comma as a user
                 users.push_back(temp.substr(0, commaPos));
-
-                // Process the part after the comma
                 temp = temp.substr(commaPos + 1);
             }
-
-            // If there's any remaining part of the user (after comma split), add it
             if (!temp.empty())
                 users.push_back(temp);
         }
 
-        // Step 4: Extract the optional comment (if present)
         if (iss.peek() != EOF)
         {
             std::getline(iss, comment);
-            comment = trim(comment); // Clean up the comment
+            comment = trim(comment);
         }
 
-        // Check if there are enough parameters (at least one user)
         if (users.empty())
         {
             std::string errormsg = std::string(RED) + "461 KICK :Not enough parameters\r\n" + std::string(EN);
@@ -63,7 +50,6 @@ void Server::kickCommand(int fd, const std::string &message)
             return;
         }
 
-        // Find the channel
         std::map<std::string, Channel>::iterator channelIt = channels.find(channelName);
 
         if (channelIt == channels.end())
@@ -75,7 +61,6 @@ void Server::kickCommand(int fd, const std::string &message)
 
         Channel &channel = channelIt->second;
 
-        // Step 5: Check if the client is an operator in the channel
         if (!channel.isOperator(fd))
         {
             std::string errormsg = std::string(RED) + "482 " + channelName + " :You're not channel operator\r\n" + std::string(EN);
@@ -83,7 +68,6 @@ void Server::kickCommand(int fd, const std::string &message)
             return;
         }
 
-        // Step 6: Iterate over the list of users to kick
         for (std::vector<std::string>::iterator userIt = users.begin(); userIt != users.end(); ++userIt)
         {
             // Find the target client by nickname
@@ -97,7 +81,6 @@ void Server::kickCommand(int fd, const std::string &message)
 
             Client &target = *targetIt;
 
-            // Step 7: Check if the client is part of the channel
             if (!channel.isInChannel(target.getFd()))
             {
                 std::string errormsg = std::string(RED) + "441 " + *userIt + " " + channelName + " :They aren't on that channel\r\n" + std::string(EN);
@@ -105,7 +88,6 @@ void Server::kickCommand(int fd, const std::string &message)
                 continue;
             }
 
-            // Step 8: Send kick message to the channel
             std::string kickMessage = ":" + client.getNickname() + " KICKED " + channelName + " " + *userIt;
             if (!comment.empty())
             {
@@ -113,8 +95,6 @@ void Server::kickCommand(int fd, const std::string &message)
             }
             kickMessage += "\r\n";
             channel.broadcastToChannel(kickMessage);
-
-            // Step 9: Remove the target from the channel
             channel.removeClient(target.getFd());
         }
     }
