@@ -10,7 +10,7 @@ void Server::topicCommand(int fd, std::string const &message)
 
     if (message.size() < 7)
     {
-        std::string err = "461 " + client.getNickname() + " TOPIC :Not enough parameters\r\n";
+        std::string err = std::string(RED) + ":" + this->hostname + " 461 " + client.getNickname() + " TOPIC :Not enough parameters\r\n";
         send(fd, err.c_str(), err.size(), 0);
         return;
     }
@@ -23,7 +23,7 @@ void Server::topicCommand(int fd, std::string const &message)
 
     if (channelName.empty() || (channelName[0] != '#' && channelName[0] != '&'))
     {
-        std::string err = "403 " + client.getNickname() + " :Invalid channel name\r\n";
+        std::string err = std::string(RED) + ":" + this->hostname + " 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n";
         send(fd, err.c_str(), err.size(), 0);
         return;
     }
@@ -39,7 +39,7 @@ void Server::topicCommand(int fd, std::string const &message)
     std::map<std::string, Channel>::iterator channelIt = channels.find(channelName);
     if (channelIt == channels.end())
     {
-        std::string err = "403 " + client.getNickname() + " " + channelName + " :No such channel\r\n";
+        std::string err = std::string(RED) + ":" + this->hostname + " 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n";
         send(fd, err.c_str(), err.size(), 0);
         return;
     }
@@ -47,7 +47,7 @@ void Server::topicCommand(int fd, std::string const &message)
 
     if (!channel.isInChannel(fd))
     {
-        std::string err = "442 " + client.getNickname() + " " + channelName + " :You're not on that channel\r\n";
+        std::string err = std::string(RED) + ":" + this->hostname +  " 442 " + client.getNickname() + " " + channelName + " :You're not on that channel\r\n";
         send(fd, err.c_str(), err.size(), 0);
         return;
     }
@@ -56,18 +56,18 @@ void Server::topicCommand(int fd, std::string const &message)
     {
         if (channel.getTopic().empty())
         {
-            std::string rpl_notopic = "331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n";
+            std::string rpl_notopic = std::string(YEL) + ":" + this->hostname + " 331 " + client.getNickname() + " " + channelName + " :No topic is set\r\n";
             send(fd, rpl_notopic.c_str(), rpl_notopic.size(), 0);
         }
         else
         {
-            std::string rpl_topic = "332 " + client.getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n";
+            std::string rpl_topic = std::string(YEL) + ":" + this->hostname + " 332 " + client.getNickname() + " " + channelName + " :" + channel.getTopic() + "\r\n";
             send(fd, rpl_topic.c_str(), rpl_topic.size(), 0);
         }
 
         std::ostringstream oss;
         oss << time(NULL);
-        std::string rpl_whotime = "333 " + client.getNickname() + " " + channelName + " " + client.getNickname() + " " + oss.str() + "\r\n";
+        std::string rpl_whotime = std::string(YEL) + ":" + this->hostname + " 333 " + client.getNickname() + " " + channelName + " " + client.getNickname() + " " + oss.str() + "\r\n";
         send(fd, rpl_whotime.c_str(), rpl_whotime.size(), 0);
         return;
     }
@@ -83,6 +83,6 @@ void Server::topicCommand(int fd, std::string const &message)
 
     std::string topicChangedMessage = "TOPIC " + channelName + " :" + topic + "\r\n";
     channel.broadcastToChannel(topicChangedMessage);
-    std::string rpl_topicset = "332 " + client.getNickname() + " " + channelName + " :" + topic + "\r\n";
+    std::string rpl_topicset = std::string(YEL) + ":" + this->hostname + " 332 " + client.getNickname() + " " + channelName + " :" + topic + "\r\n";
     send(fd, rpl_topicset.c_str(), rpl_topicset.size(), 0);
 }

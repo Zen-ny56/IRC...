@@ -202,7 +202,8 @@ void Server::serverInit(int port, std::string pass)
 	serSocket(); //-> create the server socket
 
 	if (!gethostname(this->hostname, sizeof(this->hostname)))
-		std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
+		this->startTime = getCurrentDateTime();
+	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
 	std::cout << "Listening on " << this->hostname << " on " << this->port << " \r\n";
 	while (Server::signal == false)
 	{ //-> run the server until the signal is received
@@ -662,10 +663,10 @@ void Server::joinChannel(int fd, const std::string& channelName, const std::stri
 		if (bt == clients.end())
 			throw std::runtime_error("Error finding clients\n");
 		Client& user = (*this)[bt];
-		std::string msg = std::string(YEL) + ":" + this->hostname + " 353 " + client.getNickname() + " = " + channelName + " :" + (user.isOperator() ? "@" : "") + user.getNickname() + "\r\n" + std::string(WHI);
+		std::string msg = std::string(YEL) + ":" + this->hostname + " 353 " + client.getNickname() + " = " + channelName + " :" + (channel.isOperator(user.getFd()) ? "@" : "") + user.getNickname() + "\r\n" + std::string(EN);
 		send(fd, msg.c_str(), msg.size(), 0); 
 	}
-	std::string msg = std::string(YEL) + "366 " + client.getNickname() + " " + channelName + " :End of /Names list\r\n" + std::string(WHI);
+	std::string msg = std::string(YEL) + ":" + this->hostname + " 366 " + client.getNickname() + " " + channelName + " :End of /NAMES list\r\n" + std::string(EN);
     send(fd, msg.c_str(), msg.size(), 0);
 }
 
@@ -706,16 +707,16 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		throw std::runtime_error("Error finding client\n");
 	Client& sender = (*this)[bt];
     size_t commandEnd = message.find(' ');
-    if (commandEnd == std::string::npos || message.substr(0, commandEnd) != "PRIVMSG") {
-        std::string error = std::string(RED) + "421: Unknown command\r\n" + std::string(WHI);
-    }
+    // if (commandEnd == std::string::npos || message.substr(0, commandEnd) != "PRIVMSG") {
+    //     std::string error = std::string(RED) + "421: Unknown command\r\n" + std::string(WHI);
+    // }
     // Skip the "PRIVMSG" part
     size_t targetStart = commandEnd + 1; // Position after "PRIVMSG "
     size_t spacePos = message.find(' ', targetStart); // Find space after target
     if (spacePos == std::string::npos)
 	{
         // If there's no space after the target, no message text is provided
-        std::string error = std::string(RED) + "411: No recipient given (PRIVMSG)\r\n" + std::string(WHI);
+        std::string error = std::string(RED) + ":" + this->hostname +  " 411 " + sender.getNickname() + " :No recipient given (PRIVMSG)\r\n" + std::string(EN);
         send(fd, error.c_str(), error.size(), 0); // ERR_NORECIPIENT
         return;
     }
@@ -725,7 +726,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
     size_t textStart = message.find_first_not_of(' ', spacePos + 1);
     if (textStart == std::string::npos) {
         // If no text is found after the target, return an error
-        std::string error = std::string(RED) + "412: No text to send\r\n" + std::string(WHI);
+        std::string error = std::string(RED) + ":" + this->hostname +  " 412 " + sender.getNickname() +  " :No text to send\r\n" + std::string(EN);
         send(fd, error.c_str(), error.size(), 0); // ERR_NOTEXTTOSEND
         return;
     }
@@ -736,7 +737,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		std::map<std::string, Channel>::iterator it = channels.find(target);
 		if (it == channels.end())
 		{
-			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
+			std::string error = std::string(RED) + ":" + this->hostname + " 404 " + sender.getNickname() + " " + target + " :Cannot send to channel\r\n" + std::string(EN);
 			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
 			return;
 		}
@@ -744,7 +745,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		Channel& channel = it->second;
 		if (!channel.isInChannel(fd) || channel.isBanned(sender.getNickname()))
 		{
-			std::string error = std::string(RED) + "404 Cannot send to channel " + target + "\r\n" + std::string(WHI);
+			std::string error = std::string(RED) + ":" + this->hostname + " 404 " + sender.getNickname() + " " + target + " :Cannot send to channel\r\n" + std::string(EN);
 			send(fd, error.c_str(), error.size(), 0); // ERR_CANNOTSENDTOCHAN
 			return;
 		}
@@ -757,7 +758,7 @@ void Server::processPrivmsg(int fd, const std::string& message)
 		std::vector<Client>::iterator ct = getClientUsingNickname(target);
 		if (ct == clients.end())
 		{
-			std::string error = std::string(RED) + "401: No such nickname " + target + "\r\n" + std::string(WHI);
+			std::string error = std::string(RED) + ":" + this->hostname + " 401 " + sender.getNickname() + " " + target + " :No such nick/channel\r\n" + std::string(EN);
             send(fd, error.c_str(), error.size(), 0); // ERR_NOSUCHNICK
 			return ;
 		}

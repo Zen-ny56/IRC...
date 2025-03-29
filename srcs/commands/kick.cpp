@@ -18,7 +18,7 @@ void Server::kickCommand(int fd, const std::string &message)
         iss >> channelName;
         if (channelName.empty())
         {
-            std::string errormsg = std::string(RED) + "461 KICK :Not enough parameters\r\n" + std::string(EN);
+            std::string errormsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getNickname() +  " KICK :Not enough parameters\r\n" + std::string(EN);
             send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NEEDMOREPARAMS
             return;
         }
@@ -45,7 +45,7 @@ void Server::kickCommand(int fd, const std::string &message)
 
         if (users.empty())
         {
-            std::string errormsg = std::string(RED) + "461 KICK :Not enough parameters\r\n" + std::string(EN);
+            std::string errormsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getNickname() +  " KICK :Not enough parameters\r\n" + std::string(EN);
             send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NEEDMOREPARAMS
             return;
         }
@@ -54,7 +54,7 @@ void Server::kickCommand(int fd, const std::string &message)
 
         if (channelIt == channels.end())
         {
-            std::string errormsg = std::string(RED) + "403 " + channelName + " :No such channel\r\n" + std::string(EN);
+            std::string errormsg = std::string(RED) + ":" + this->hostname  + " 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n" + std::string(EN);
             send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NOSUCHCHANNEL
             return;
         }
@@ -63,7 +63,7 @@ void Server::kickCommand(int fd, const std::string &message)
 
         if (!channel.isOperator(fd))
         {
-            std::string errormsg = std::string(RED) + "482 " + channelName + " :You're not channel operator\r\n" + std::string(EN);
+            std::string errormsg = std::string(RED) + ":" + this->hostname + " 482 " + client.getNickname() + " " + channelName + " :You're not channel operator\r\n" + std::string(EN);
             send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_CHANOPRIVSNEEDED
             return;
         }
@@ -74,7 +74,7 @@ void Server::kickCommand(int fd, const std::string &message)
             std::vector<Client>::iterator targetIt = getClientUsingNickname(*userIt);
             if (targetIt == clients.end())
             {
-                std::string errormsg = std::string(RED) + "401 " + *userIt + " :No such user\r\n" + std::string(EN);
+                std::string errormsg =std::string(RED) + ":" + this->hostname +  " 401 " + client.getNickname() + " " + *userIt + " :No such nick/channel\r\n" + std::string(EN);
                 send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_NOSUCHNICK
                 continue;
             }
@@ -83,7 +83,7 @@ void Server::kickCommand(int fd, const std::string &message)
 
             if (!channel.isInChannel(target.getFd()))
             {
-                std::string errormsg = std::string(RED) + "441 " + *userIt + " " + channelName + " :They aren't on that channel\r\n" + std::string(EN);
+                std::string errormsg = std::string(RED) + ":" + this->hostname + " 441 " + client.getNickname() + " " + *userIt + " " + channelName + " :They aren't on that channel\r\n" + std::string(EN);
                 send(fd, errormsg.c_str(), errormsg.size(), 0); // ERR_USERNOTINCHANNEL
                 continue;
             }

@@ -1,6 +1,20 @@
 #include "../include/Client.hpp"
 #include "../include/Server.hpp"
 
+std::string getCurrentDateTime()
+{
+    // Get current time as time_t
+    std::time_t now = std::time(0);
+    // Convert to local time (returns pointer to static internal structure)
+    struct std::tm* localTime = std::localtime(&now);
+    // Buffer to hold formatted date/time string
+    char buffer[80];
+    // Format: "YYYY-MM-DD HH:MM:SS"
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localTime);
+
+    return std::string(buffer);
+}
+
 bool isValidPort(const std::string &port_str, int &port)
 {
     if (port_str.empty())

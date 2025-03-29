@@ -38,6 +38,7 @@ class Server //-> class for server
         std::string password;
         char hostname[256];
         static const char BASE64_CHARS[];
+        std::string startTime;
         std::vector<Client> clients; //-> vector of Clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
         std::map<std::string, int> nicknameMap; //-> map for nickname check
@@ -88,3 +89,4 @@ class Server //-> class for server
 
 bool isNumber(const std::string &str);
 int stringToInt(const std::string &str);
+std::string getCurrentDateTime();

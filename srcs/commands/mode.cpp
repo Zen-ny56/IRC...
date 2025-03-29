@@ -115,14 +115,14 @@ void Server::handleMode(int fd, const std::string& message)
 	std::map<std::string, Channel>::iterator bt = channels.find(channelName);
 	if (bt == channels.end())
 	{
-		std::string msg = std::string(RED) + ":ircserv 403 " + client.getNickname() + " " + channelName + " :No such channel" + std::string(WHI);
+		std::string msg = std::string(RED) + ":" + this->hostname + " 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n" + std::string(WHI);
 		send(fd, msg.c_str(), msg.size(), 0);
 		return;
  	}
 	Channel& channel = bt->second;
 	if (!channel.isOperator(fd))
 	{
-	 	std::string msg = std::string(RED) + ":ircserv 482 " + client.getNickname() + " " + channel.getChannelName() + " :You're not channel operator\r\n" + std::string(WHI);
+	 	std::string msg = std::string(RED) + ":" + this->hostname + " 482 " + client.getNickname() + " " + channel.getChannelName() + " :You're not channel operator\r\n" + std::string(WHI);
 		send(fd, msg.c_str(), msg.size(), 0);
 		return;
 	}
@@ -183,15 +183,15 @@ void Server::executeMode(Client& client, Channel& channel, std::map<std::string,
  					targetIt = getClientUsingNickname(ct->second);
             		if (targetIt == clients.end())
             		{
-                		msg = std::string(RED) + ":ircserv 401 " + ct->second + " :No such user\r\n" + std::string(EN);
+                		msg = std::string(RED) + ":" + this->hostname + " 401 " + client.getNickname() + " " +  ct->second + " :No such nick/channel\r\n" + std::string(EN);
                 		send(fd, msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
             		}
 					channel.addOperator(targetIt->getFd());
 					modeBool[o] = true;
 					break; 
     			default:
-					msg = std::string(RED) + ":ircserv 472 " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
-        			send(fd, msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
+				msg = std::string(RED) + ":" + this->hostname + " 472 " + client.getNickname() + " " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
+				send(fd, msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
        				break;
 			}
 		}
@@ -226,14 +226,14 @@ void Server::executeMode(Client& client, Channel& channel, std::map<std::string,
  					targetIt = getClientUsingNickname(ct->second);
             		if (targetIt == clients.end())
             		{
-                		msg = std::string(RED) + ":ircserv 401 " + ct->second + " :No such user\r\n" + std::string(EN);
+                		msg = std::string(RED) + ":" + this->hostname + " 401 " + client.getNickname() + " " +  ct->second + " :No such nick/channel\r\n" + std::string(EN);
                 		send(fd, msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
             		}
 					channel.removeOperator(targetIt->getFd());
 					modeBool[o] = false;
 					break; 
     			default:
-        			msg = std::string(RED) + ":ircserv 472 " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
+        			msg = std::string(RED) + ":" + this->hostname + " 472 " + client.getNickname() + " " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
         			send(fd, msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
        				break;
 			}
@@ -278,7 +278,7 @@ std::string Server::generateRPL_CHANNELMODEIS(Client& client, Channel& channel, 
 		modeArgs += " " + ss.str();
 	}
 	// Format response
-	std::string response = std::string(YEL) + ":ircserv 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(WHI);
+	std::string response = std::string(YEL) + ":" + this->hostname +  + " 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(EN);
 	send(fd, response.c_str(), response.size(), 0);
 	return (response);
 }
