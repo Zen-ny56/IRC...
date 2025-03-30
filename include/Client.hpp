@@ -5,25 +5,20 @@
 class Client //-> class for client
 {
 private:
-	bool	passAuthen;
-	bool	userAuthen;
-	bool	nickAuthen;
 	std::string userName;
 	std::string realName;
+	std::string nickName;
 	int fd; //-> client file descriptor
 	std::string IPadd; //-> client ip address
-	std::string nickName;
+	std::map<std::string, bool> faceouthedirt;
+
 public:
 	Client();// Default constructor
 	int getFd();// Getter for fd
 	void setNickname(std::string nickName);
 	void setFd(int fd); //-> setter for fd
-	void setPassAuthen();
-	void setUserAuthen();
-	void setNickAuthen();
-	bool getUserAuthen();
-	bool getNickAuthen();
-	bool getPassAuthen();
+	std::map<std::string , bool>& getFaceOutheDirt();
+	int ifAuthenticated();
 	void setIpAdd(std::string ipadd);//-> setter for ipadd
 	void setUserName(std::string userName, std::string realName);
 	std::string getIPadd();

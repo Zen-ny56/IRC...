@@ -37,11 +37,12 @@ class Server //-> class for server
         int port; //-> server port
         std::string password;
         char hostname[256];
+        static const char BASE64_CHARS[];
+        std::string startTime;
         std::vector<Client> clients; //-> vector of Clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
-        
     public:
         Server(); //-> default constructor
         void serverInit(int port, std::string pass); //-> server initialization
@@ -81,7 +82,11 @@ class Server //-> class for server
         void kickCommand(int fd, const std::string &message);
         void topicCommand(int fd, const std::string &message);
         void inviteCommand(int fd, std::string const &message);
+        static bool is_base64(unsigned char c);
+        std::string base64_decode(const std::string &encoded_string);
+
 };
 
 bool isNumber(const std::string &str);
 int stringToInt(const std::string &str);
+std::string getCurrentDateTime();
