@@ -290,6 +290,8 @@ void Server::validatePassword(int fd, const std::string& message)
 			send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_PASSWDMISMATCH
 			return ;
         }
+		if (!client.ifAuthenticated())
+			sendWelcome(fd, client);
 	}
 	return ; // Authentication failed
 }
@@ -341,12 +343,34 @@ void Server::processUser(int fd, const std::string& message)
 	}
 	// Register the user
 	client.setUserName(username, realname);
-	// Log successful processing
-	// this->sendWelcome(fd, client);
+	if (!client.ifAuthenticated())
+		sendWelcome(fd, client);
+	return;
 }
 
 void Server::sendWelcome(int fd, Client& client)
 {
+	// 1. RPL_WELCOME (001)
+	std::string welcomeMsg = std::string(YEL) + ":" + this->hostname + " 001 " +  client.getNickname() + " :Welcome to the IRC Network, " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
+	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
+
+	// 2. RPL_YOURHOST (002)
+	std::string yourHostMsg = std::string(YEL) + ":" + this->hostname + " 002 " +  client.getNickname() + " :Your host is irssi (" + this->hostname + "), running version 1.0" + "\r\n";
+	send(fd, yourHostMsg.c_str(), yourHostMsg.size(), 0);
+
+	// 3. RPL_CREATED (003)
+	std::string createdMsg = std::string(YEL) + ":" + this->hostname + " 003 " + client.getNickname() + " :This server was created " + this->startTime + "\r\n";
+	send(fd, createdMsg.c_str(), createdMsg.size(), 0);
+
+	// 4. RPL_MYINFO (004)
+	std::string myInfoMsg = std::string(YEL) + ":" + this->hostname + " 004 " + client.getNickname() + " irssi (" + this->hostname + ") v1.0 " + " " + "oiklt[klo]\r\n";
+	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
+
+	// 5. RPL_ISUPPORT (005)
+	std::string isupportMsg = std::string(YEL) + ":" + this->hostname + " 005 " + client.getNickname() + " irrsi (" + this->hostname + ") :are supported by this server\r\n";
+	isupportMsg += "CHANTYPES=# PREFIX=(+o+k+t+l+i-o-k-t-l-i) CHANLIMIT=#:100 MODES=5 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
+	send(fd, isupportMsg.c_str(), isupportMsg.size(), 0);
+
 	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
 	std::cout << "\033[1;32m          IRC Command List and Format        \033[0m" << std::endl;
 	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
@@ -403,26 +427,6 @@ void Server::sendWelcome(int fd, Client& client)
 	std::cout << "\033[1;32m            End of Command List               \033[0m" << std::endl;
 	std::cout << "\033[1;34m===============================================\033[0m" << std::endl;
 
-	// 1. RPL_WELCOME (001)
-	std::string welcomeMsg = std::string(YEL) + ":" + this->hostname + " 001 " +  client.getNickname() + " :Welcome to the IRC Network, " + client.getNickname() + "!" + client.getUserName() + "@" + client.getIPadd() + "\r\n";
-	send(fd, welcomeMsg.c_str(), welcomeMsg.size(), 0);
-
-	// 2. RPL_YOURHOST (002)
-	std::string yourHostMsg = std::string(YEL) + ":" + this->hostname + " 002 " +  client.getNickname() + " :Your host is irssi (" + this->hostname + "), running version 1.0" + "\r\n";
-	send(fd, yourHostMsg.c_str(), yourHostMsg.size(), 0);
-
-	// 3. RPL_CREATED (003)
-	std::string createdMsg = std::string(YEL) + ":" + this->hostname + " 003 " + client.getNickname() + " :This server was created " + this->startTime + "\r\n";
-	send(fd, createdMsg.c_str(), createdMsg.size(), 0);
-
-	// 4. RPL_MYINFO (004)
-	std::string myInfoMsg = std::string(YEL) + ":" + this->hostname + " 004 " + client.getNickname() + " irssi (" + this->hostname + ") v1.0 " + " " + "oiklt[klo]\r\n";
-	send(fd, myInfoMsg.c_str(), myInfoMsg.size(), 0);
-
-	// 5. RPL_ISUPPORT (005)
-	std::string isupportMsg = std::string(YEL) + ":" + this->hostname + " 005 " + client.getNickname() + " irrsi (" + this->hostname + ") :are supported by this server\r\n";
-	isupportMsg += "CHANTYPES=# PREFIX=(+o+k+t+l+i-o-k-t-l-i) CHANLIMIT=#:100 MODES=4 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
-	send(fd, isupportMsg.c_str(), isupportMsg.size(), 0);
 }
 
 void Server::processNickUser(int fd, const std::string& message)
@@ -466,6 +470,8 @@ void Server::processNickUser(int fd, const std::string& message)
 		send(fd, response.c_str(), response.length(), 0);
 		std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
 	}
+	if (!client.ifAuthenticated())
+		sendWelcome(fd, client);
 }
 
 void Server::processSasl(int fd, const std::string& message)
@@ -504,10 +510,12 @@ void Server::processSasl(int fd, const std::string& message)
 		{
 			client.setNickname(username);
 			client.setUserName(username, username);
-			std::string msg = std::string(GRE) + ":" + this->hostname + " 900 " + client.getIPadd() + " " + client.getNickname() + "!" + client.getUserName() + "@" + this->hostname + client.getUserName() + "_account" + " :You are now logged in as " + client.getUserName() + "\r\n" + std::string(EN);
-            send(fd, msg.c_str(), msg.size(), 0);
 			std::map<std::string, bool>::iterator bt = aMap.find("pass");
 			bt->second = true;
+			std::string msg = std::string(GRE) + ":" + this->hostname + " 900 " + client.getIPadd() + " " + client.getNickname() + "!" + client.getUserName() + "@" + this->hostname + client.getUserName() + "_account" + " :You are now logged in as " + client.getUserName() + "\r\n" + std::string(EN);
+            send(fd, msg.c_str(), msg.size(), 0);
+			if (!client.ifAuthenticated())
+				sendWelcome(fd, client);
 		}
 		else
 		{

@@ -172,8 +172,6 @@ void Channel::setTopRes(bool condition){ this->topicRes = condition;}
 
 bool Channel::getTopRes(){ return this->topicRes;}
 
-
-//gET key function
 // Remove and add Operator
 void Channel::addOperator(int fd)
 {
