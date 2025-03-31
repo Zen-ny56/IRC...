@@ -54,9 +54,9 @@ void Server::inviteCommand(int fd, std::string const &message)
                 send(fd, err.c_str(), err.size(), 0);
                 return;
             }
-            std::string rpl_inviting = std::string(GRE) + ":" + this->hostname + " 341 " + client.getNickname() + " INVITED " + nickName + " to " + channelName + "\r\n" + std::string(EN);
+            std::string rpl_inviting = std::string(GRE) + ":" + this->hostname + " 341 " + client.getNickname() + " INVITED " + nickName + " to " + channelName  + std::string(EN) + "\r\n";
             send(fd, rpl_inviting.c_str(), rpl_inviting.size(), 0);
-            std::string inviteMessage = nickName + " INVITED " + " to " + channelName + "\r\n";
+            std::string inviteMessage = std::string(GRE) + nickName + " INVITED " + " to " + channelName  + std::string(EN) + "\r\n";
             send(targetFd, inviteMessage.c_str(), inviteMessage.size(), 0);
             channel.addToInvitation(targetFd);
         }

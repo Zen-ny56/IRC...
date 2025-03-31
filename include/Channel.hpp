@@ -52,4 +52,5 @@ class Channel
 		void removeClient(int fd);
 		void addToInvitation(int fd);
 		void removeClientFromInvitation(int fd);
+		int countInchannel();
 };
