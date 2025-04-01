@@ -176,24 +176,18 @@ void Server::executeMode(Client &client, Channel &channel, std::map<std::string,
 				}
 				channel.setMax(limit);
 				modeBool[l] = true;
-				// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
-				// channel.broadcastToChannel(msg);
 				break;
 			case 'k':
 				channel.setKey(ct->second);
 				modeBool[k] = true;
-				// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
-				// channel.broadcastToChannel(msg);
 				break;
 			case 't':
 				channel.setTopRes(true);
 				modeBool[t] = true;
-				// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 				break;
 			case 'i':
 				channel.setInviteOnly(true);
 				modeBool[i] = true;
-				// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 				break;
 			case 'o':
 				targetIt = getClientUsingNickname(ct->second);
@@ -219,24 +213,18 @@ void Server::executeMode(Client &client, Channel &channel, std::map<std::string,
 				// Check if it's valid integer and convert
 				channel.setMax(INT_MAX);
 				modeBool[l] = false;
-				// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
-				// channel.broadcastToChannel(msg);
 				break;
 			case 'k':
 				channel.setKey("");
 				modeBool[k] = false;
-				// msg = "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
-				// channel.broadcastToChannel(msg);
 				break;
 			case 't':
 				channel.setTopRes(false);
 				modeBool[t] = false;
-				// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 				break;
 			case 'i':
 				channel.setInviteOnly(false);
 				modeBool[i] = false;
-				// std::cout << "MODE on " + channel.getChannelName(); + " " + modeStr + " by " + client.getNickname() + "\r\n";
 				break;
 			case 'o':
 				targetIt = getClientUsingNickname(ct->second);
