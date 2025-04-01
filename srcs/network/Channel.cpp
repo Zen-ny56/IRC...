@@ -45,6 +45,9 @@ void Channel::addClient(int fd)
 	clientFds.push_back(fd);
 }
 
+int Channel::countInchannel(){
+	return clientFds.size();
+}
 
 void Channel::setMax(int max){this->max = max;}
 
