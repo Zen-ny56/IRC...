@@ -60,7 +60,7 @@
 >> :*.freenode.net 372 zeni :  #freenode                - Chat about freenode.
 >> :*.freenode.net 372 zeni : 
 >> :*.freenode.net 372 zeni :  Type /join #<channel>
->> :*.freenode.net 372 zeni : 
+>> :*.freenode.net 372 zeni :
 >> :*.freenode.net 372 zeni :  Thank you for using freenode!
 >> :*.freenode.net 376 zeni :End of message of the day.
 >> :*.freenode.net 396 zeni freenode-59e.p57.hdhqau.IP :is now your displayed host

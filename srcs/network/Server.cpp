@@ -50,7 +50,7 @@ void Server::receiveNewData(int fd)
 	{ //-> print the received data
 		buff[bytes] = '\0';
 		std::string message(buff);
-		if (message.find("/CAP LS") != std::string::npos)
+		if (message.find("CAP LS") != std::string::npos)
 			sendCapabilities(fd);
 		else if (message.rfind("/PASS ", 0) == 0)
 			validatePassword(fd, message);
