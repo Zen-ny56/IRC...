@@ -4,7 +4,7 @@
 
 void Server::inviteCommand(int fd, std::string const &message)
 {
-    if (message.rfind("/INVITE ") == 0)
+    if (message.rfind("INVITE ") == 0)
     {
         std::vector<Client>::iterator it = getClient(fd);
         if (it == clients.end())
@@ -17,7 +17,7 @@ void Server::inviteCommand(int fd, std::string const &message)
 
         if (nickName.empty() || channelName.empty())
         {
-            std::string err = std::string(RED) + ":" + this->hostname + " 461 " + client.getNickname() +  " INVITE :Not enough parameters\r\n" + std::string(EN);
+            std::string err = std::string(RED) + ":" + this->hostname + " 461 " + client.getNickname() +  " INVITE :Not enough parameters" + std::string(EN)+ "\r\n";
             send(fd, err.c_str(), err.size(), 0);
             return;
         }
@@ -25,7 +25,7 @@ void Server::inviteCommand(int fd, std::string const &message)
         std::map<std::string, Channel>::iterator channelIt = channels.find(channelName);
         if (channelIt == channels.end() || channelIt->second.listUsers().empty())
         {
-            std::string err = std::string(RED) + ":" + this->hostname  + " 403 " + client.getNickname() + " " + channelName + " :No such channel" + std::string(EN);
+            std::string err = std::string(RED) + ":" + this->hostname  + " 403 " + client.getNickname() + " " + channelName + " :No such channel" + std::string(EN)+ "\r\n";
             send(fd, err.c_str(), err.size(), 0);
             return;
         }
@@ -33,14 +33,14 @@ void Server::inviteCommand(int fd, std::string const &message)
 
         if (channel.isInChannel(fd) == 0)
         {
-            std::string err = std::string(RED) + ":" + this->hostname  + " 442 " +  client.getNickname() + " " + channelName + " :You're not on that channel" + std::string(EN);
+            std::string err = std::string(RED) + ":" + this->hostname  + " 442 " +  client.getNickname() + " " + channelName + " :You're not on that channel" + std::string(EN)+ "\r\n";
             send(fd, err.c_str(), err.size(), 0);
             return;
         }
 
         if (channel.isInviteOnly() && !channel.isOperator(fd))
         {
-            std::string err = std::string(RED) + ":" + this->hostname  + " 473 " + channelName + " :Cannot join channel (+i)" + std::string(EN);
+            std::string err = std::string(RED) + ":" + this->hostname  + " 473 " + channelName + " :Cannot join channel (+i)" + std::string(EN)+ "\r\n";
             send(fd, err.c_str(), err.size(), 0);
             return;
         }
@@ -50,7 +50,7 @@ void Server::inviteCommand(int fd, std::string const &message)
             int targetFd = targetClientIt->getFd();
             if (channel.isInChannel(targetFd))
             {
-                std::string err = std::string(RED) + ":" + this->hostname + " 443 " + client.getNickname() + " " + nickName + " " + channelName + " :User already on channel" + std::string(EN);
+                std::string err = std::string(RED) + ":" + this->hostname + " 443 " + client.getNickname() + " " + nickName + " " + channelName + " :User already on channel" + std::string(EN)+ "\r\n";
                 send(fd, err.c_str(), err.size(), 0);
                 return;
             }
