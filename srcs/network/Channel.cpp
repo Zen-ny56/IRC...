@@ -200,6 +200,11 @@ void Channel::removeClient(int fd)
 	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
 	{
 		if (*it == fd)
-		{ clientFds.erase(it); break;}
+		{ 
+			if(isOperator(*it))
+				removeOperator(*it);
+			clientFds.erase(it); 
+			break;
+		}
 	}
 }
