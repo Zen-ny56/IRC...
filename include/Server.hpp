@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stack>
 #include <queue>
+#include <ctime>
 #include <vector> //-> for vector
 #include <sys/socket.h> //-> for socket()
 #include <sys/types.h> //-> for socket()
@@ -41,6 +42,7 @@ class Server //-> class for server
         std::string startTime;
         std::vector<Client> clients; //-> vector of Clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
+        std::map<int, time_t> clientLastPing;
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
     public:
@@ -56,10 +58,10 @@ class Server //-> class for server
         void processCapReq(int fd, const std::string& message);
         void markPasswordAccepted(int fd);
         void validatePassword(int fd, const std::string& message);
-        void processNickUser(int fd, const std::string& message);
+        void processNickUser(int fd, const std::string& nickname);
         void processSasl(int fd, const std::string& message);
         bool isValidNickname(const std::string& nickname);
-        void processUser(int fd, const std::string& message);
+        void processUser(int fd, std::string& username, std::string& ident, std::string& host, std::string& realname);
         void capEnd(int fd);
         std::vector<Client>::iterator getClient(int fd);
         void handleChannel(int fd, const std::string& message);
@@ -84,6 +86,9 @@ class Server //-> class for server
         void inviteCommand(int fd, std::string const &message);
         static bool is_base64(unsigned char c);
         std::string base64_decode(const std::string &encoded_string);
+        void parse_line(int fd, const std::string& line);
+        void receivePong(int fd);
+        void sendPingToClients();
 
 };
 

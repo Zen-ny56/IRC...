@@ -77,8 +77,8 @@ void Server::parse_line(int fd, const std::string &line)
 	stream >> command;
 	// stream >> type;
 	// std::cout << line << std::endl;
-	std::cout << command << std::endl;
-	std::cout << type << std::endl;
+	// std::cout << command << std::endl;
+	// std::cout << type << std::endl;
     if (command == "NICK")
 	{
         std::string nickname;
@@ -97,8 +97,31 @@ void Server::parse_line(int fd, const std::string &line)
         if (pos != std::string::npos)
             realname = realname.substr(pos + 1);
         processUser(fd, user, ident, host, realname);
+
     }
 }
+
+void Server::sendPingToClients()
+{
+    time_t now = time(NULL);
+    for (std::map<int, time_t>::iterator it = clientLastPing.begin(); it != clientLastPing.end(); ++it)
+    {
+        int fd = it->first;
+        if (now - it->second > 60) // No PONG in 60 seconds
+        {
+            std::cout << "Client <" << fd << "> timed out. Disconnecting." << std::endl;
+            close(fd); // Disconnect client
+            clearClients(fd); // Remove client from tracking
+        }
+        else if (now - it->second > 30) // Send PING if no response in 30 seconds
+        {
+            std::string pingMessage = "PING :ServerCheck\r\n";
+            send(fd, pingMessage.c_str(), pingMessage.length(), 0);
+            std::cout << "Sent PING to client <" << fd << ">." << std::endl;
+        }
+    }
+}
+
 
 void Server::receiveNewData(int fd)
 {
@@ -106,6 +129,7 @@ void Server::receiveNewData(int fd)
 	memset(buff, 0, sizeof(buff)); //-> clear the buffer
 
 	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1, 0); //-> receive the data
+	sendPingToClients();
 	if (bytes <= 0)
 	{ //-> check if the client disconnected
 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
@@ -144,6 +168,8 @@ void Server::receiveNewData(int fd)
 			processCapReq(fd, message);
 		else if (message.find("QUIT", 0) == 0)
 			processQuit(fd, message);
+		else if (message.find("PONG", 0) == 0)
+			receivePong(fd);
 		else if (message.find("JOIN", 0) == 0)
 			handleChannel(fd, message); /*Function where JOIN is handled*/
 		else if (message.find("PRIVMSG", 0) == 0)
@@ -161,6 +187,13 @@ void Server::receiveNewData(int fd)
 			// std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
 		} // handling authentication error to be displayed to the client.
 	}
+}
+
+void Server::receivePong(int fd)
+{
+	time_t currentTime = time(NULL); // Get current timestamp
+    std::map<int, time_t>::iterator it = clientLastPing.find(fd);
+	it->second = currentTime;
 }
 
 void Server::reverseRotate(std::stack<std::string> &s)
@@ -246,7 +279,7 @@ void Server::acceptNewClient()
 	cli.setIpAdd(inet_ntoa((cliadd.sin_addr))); //-> convert the ip address to string and set it
 	clients.push_back(cli);						//-> add the client to the vector of clients
 	fds.push_back(newPoll);						//-> add the client socket to the pollfd
-
+	clientLastPing[cli.getFd()] = time(NULL);
 	// authenticatedClients[incofd] = false;
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
@@ -288,7 +321,7 @@ void Server::serverInit(int port, std::string pass)
 	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
 	std::cout << "Listening on " << this->hostname << " on " << this->port << " \r\n";
 	while (Server::signal == false)
-	{ //-> run the server until the signal is received
+	{ //-> run the server until the signal is received 
 
 		if ((poll(&fds[0], fds.size(), -1) == -1) && Server::signal == false) //-> wait for an event
 			throw(std::runtime_error("poll() failed"));
