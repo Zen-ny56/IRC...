@@ -67,6 +67,39 @@ void Server::closeFds()
 	}
 }
 
+
+void Server::parse_line(int fd, const std::string &line)
+{
+    std::istringstream stream(line);
+    std::string command, type;
+    
+    // stream >> type >> command;
+	stream >> command;
+	// stream >> type;
+	// std::cout << line << std::endl;
+	std::cout << command << std::endl;
+	std::cout << type << std::endl;
+    if (command == "NICK")
+	{
+        std::string nickname;
+        stream >> nickname;
+        std::cout << "Nickname: " << nickname << std::endl;
+        processNickUser(fd, nickname);
+    } 
+    else if (command == "USER")
+	{
+        std::string user, ident, host, realname;
+        stream >> user >> ident >> host;
+
+        // Extract the real name (everything after ':')
+        std::getline(stream, realname); 
+        size_t pos = realname.find(':'); 
+        if (pos != std::string::npos)
+            realname = realname.substr(pos + 1);
+        processUser(fd, user, ident, host, realname);
+    }
+}
+
 void Server::receiveNewData(int fd)
 {
 	char buff[1024];			   //-> buffer for the received data
@@ -88,9 +121,19 @@ void Server::receiveNewData(int fd)
 		else if (message.rfind("PASS ", 0) == 0)
 			validatePassword(fd, message);
 		else if (message.rfind("NICK ", 0) == 0)
-			processNickUser(fd, message);
+		{
+			std::istringstream inputStream(message);
+			std::string line;
+			while (std::getline(inputStream, line))
+				parse_line(fd, line);
+		}
 		else if (message.rfind("USER ", 0) == 0)
-			processUser(fd, message);
+		{
+			std::istringstream inputStream(message);
+			std::string line;
+			while (std::getline(inputStream, line))
+				parse_line(fd, line);
+		}
 		else if (message.rfind("INVITE ", 0) == 0)
 			inviteCommand(fd, message);
 		else if (message.rfind("KICK ", 0) == 0)
@@ -336,7 +379,58 @@ void Server::validatePassword(int fd, const std::string &message)
 	return; // Authentication failed
 }
 
-void Server::processUser(int fd, const std::string &message)
+// void Server::processUser(int fd, const std::string &message)
+// {
+// 	// Split the message into parts
+// 	std::vector<Client>::iterator it = getClient(fd);
+// 	if (it == clients.end())
+// 		throw std::runtime_error("Client was not found]\n");
+// 	Client &client = (*this)[it];
+// 	if (!client.ifAuthenticated())
+// 		return;
+// 	std::map<std::string, bool> &aMap = client.getFaceOutheDirt();
+// 	std::istringstream iss(message);
+// 	std::vector<std::string> parts;
+// 	std::string part;
+// 	while (std::getline(iss, part, ' '))
+// 		parts.push_back(part);
+// 	// Check minimum parameter count
+// 	if (parts.size() < 5 || parts[0] != "USER")
+// 	{
+// 		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
+// 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
+// 		return;
+// 	}
+// 	std::string username = parts[1];
+// 	std::string unused1 = parts[2]; // This is usually "0"
+// 	std::string unused2 = parts[3]; // This is usually "*"
+// 	std::string realname = message.substr(message.find(':') + 1);
+
+// 	// Check if the user is already registered
+// 	std::map<std::string, bool>::iterator bt = aMap.find("user");
+// 	if (bt != aMap.end())
+// 	{
+// 		if (bt->second == true)
+// 		{
+// 			std::string errMsg = std::string(RED) + ":" + this->hostname + " 462 " + client.getIPadd() + " :You may not reregister\r\n" + std::string(EN);
+// 			send(fd, errMsg.c_str(), errMsg.size(), 0);
+// 			return;
+// 		}
+// 	}
+// 	if (username.empty() || realname.empty() || isValidNickname(username) == false)
+// 	{
+// 		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
+// 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
+// 		return;
+// 	}
+// 	// Register the user
+// 	client.setUserName(username, realname);
+// 	if (!client.ifAuthenticated())
+// 		sendWelcome(fd, client);
+// 	return;
+// }
+
+void Server::processUser(int fd, std::string& username, std::string& ident, std::string& host, std::string& realname)
 {
 	// Split the message into parts
 	std::vector<Client>::iterator it = getClient(fd);
@@ -346,23 +440,13 @@ void Server::processUser(int fd, const std::string &message)
 	if (!client.ifAuthenticated())
 		return;
 	std::map<std::string, bool> &aMap = client.getFaceOutheDirt();
-	std::istringstream iss(message);
-	std::vector<std::string> parts;
-	std::string part;
-	while (std::getline(iss, part, ' '))
-		parts.push_back(part);
 	// Check minimum parameter count
-	if (parts.size() < 5 || parts[0] != "USER")
+	if (ident.empty() || username.empty() || host.empty() || realname.empty() || isValidNickname(username) == false)
 	{
 		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
-	std::string username = parts[1];
-	std::string unused1 = parts[2]; // This is usually "0"
-	std::string unused2 = parts[3]; // This is usually "*"
-	std::string realname = message.substr(message.find(':') + 1);
-
 	// Check if the user is already registered
 	std::map<std::string, bool>::iterator bt = aMap.find("user");
 	if (bt != aMap.end())
@@ -373,12 +457,6 @@ void Server::processUser(int fd, const std::string &message)
 			send(fd, errMsg.c_str(), errMsg.size(), 0);
 			return;
 		}
-	}
-	if (username.empty() || realname.empty() || isValidNickname(username) == false)
-	{
-		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
-		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
-		return;
 	}
 	// Register the user
 	client.setUserName(username, realname);
@@ -439,47 +517,41 @@ void Server::sendWelcome(int fd, Client &client)
 	std::cout << ":" << this->hostname << " 376 " + client.getNickname() << ":End of message of the day." << std::endl;
 }
 
-void Server::processNickUser(int fd, const std::string &message)
+void Server::processNickUser(int fd, const std::string &nickname)
 {
 	// NICK command
 	std::vector<Client>::iterator it = getClient(fd);
 	if (it == clients.end())
 		throw std::runtime_error("Client was not found\n");
-	Client &client = (*this)[it];
+	Client &client = (*this)[it]; 
 	if (!client.ifAuthenticated())
 		return;
-	if (message.rfind("NICK ", 0) == 0)
+	if (nickname.empty())
 	{
-		std::string nickname = message.substr(5); // Extract nickname
-		nickname.erase(0, nickname.find_first_not_of(" \t\r\n"));
-		nickname.erase(nickname.find_last_not_of(" \t\r\n") + 1);
-		if (nickname.empty())
-		{
-			std::string errorMsg = std::string(RED) + ":" + this->hostname + " 431 " + client.getIPadd() + " :No nickname given\r\n" + std::string(EN);
-			send(fd, errorMsg.c_str(), errorMsg.size(), 0); // ERR_NONICKNAMEGIVEN
-			return;
-		}
-		if (!isValidNickname(nickname))
-		{
-			std::string errorMsg = std::string(RED) + ":" + this->hostname + " 432 " + client.getIPadd() + " " + nickname + " :Erroneous nickname\r\n" + std::string(EN); // ERR_ERRONEUSNICKNAME
-			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
-			return;
-		}
-		if (nicknameMap.find(nickname) != nicknameMap.end())
-		{
-			std::string errorMsg = std::string(RED) + ":" + this->hostname + " 433 " + client.getIPadd() + " " + nickname + " :Nickname is already in use\r\n" + std::string(EN); // ERR_NICKNAMEINUSE
-			send(fd, errorMsg.c_str(), errorMsg.length(), 0);
-			return;
-		}
-		std::string oldNickname = client.getNickname();
-		if (!oldNickname.empty())
-			nicknameMap.erase(oldNickname); // Remove old nickname from the map
-		client.setNickname(nickname);
-		nicknameMap[nickname] = fd;																								   // Add the new nickname to the map
-		std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() + "\r\n" + std::string(WHI); // Inform the client of the nickname change
-		send(fd, response.c_str(), response.length(), 0);
-		std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
+		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 431 " + client.getIPadd() + " :No nickname given\r\n" + std::string(EN);
+		send(fd, errorMsg.c_str(), errorMsg.size(), 0); // ERR_NONICKNAMEGIVEN
+		return;
 	}
+	if (!isValidNickname(nickname))
+	{
+		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 432 " + client.getIPadd() + " " + nickname + " :Erroneous nickname\r\n" + std::string(EN); // ERR_ERRONEUSNICKNAME
+		send(fd, errorMsg.c_str(), errorMsg.length(), 0);
+		return;
+	}
+	if (nicknameMap.find(nickname) != nicknameMap.end())
+	{
+		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 433 " + client.getIPadd() + " " + nickname + " :Nickname is already in use\r\n" + std::string(EN); // ERR_NICKNAMEINUSE
+		send(fd, errorMsg.c_str(), errorMsg.length(), 0);
+		return;
+	}
+	std::string oldNickname = client.getNickname();
+	if (!oldNickname.empty())
+		nicknameMap.erase(oldNickname); // Remove old nickname from the map
+	client.setNickname(nickname);
+	nicknameMap[nickname] = fd;																								   // Add the new nickname to the map
+	std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() + "\r\n" + std::string(WHI); // Inform the client of the nickname change
+	send(fd, response.c_str(), response.length(), 0);
+	std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
 	if (!client.ifAuthenticated())
 		sendWelcome(fd, client);
 }
