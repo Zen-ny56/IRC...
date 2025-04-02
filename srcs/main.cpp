@@ -1,7 +1,7 @@
 #include "../include/Client.hpp"
 #include "../include/Server.hpp"
 
-std::string getCurrentDateTime()
+std::string getCurrentDateTime() // Change function to be C++98 compatable
 {
     // Get current time as time_t
     std::time_t now = std::time(0);
