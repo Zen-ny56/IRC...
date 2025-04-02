@@ -73,12 +73,7 @@ void Server::parse_line(int fd, const std::string &line)
     std::istringstream stream(line);
     std::string command, type;
     
-    // stream >> type >> command;
 	stream >> command;
-	// stream >> type;
-	// std::cout << line << std::endl;
-	// std::cout << command << std::endl;
-	// std::cout << type << std::endl;
     if (command == "NICK")
 	{
         std::string nickname;
@@ -412,57 +407,6 @@ void Server::validatePassword(int fd, const std::string &message)
 	return; // Authentication failed
 }
 
-// void Server::processUser(int fd, const std::string &message)
-// {
-// 	// Split the message into parts
-// 	std::vector<Client>::iterator it = getClient(fd);
-// 	if (it == clients.end())
-// 		throw std::runtime_error("Client was not found]\n");
-// 	Client &client = (*this)[it];
-// 	if (!client.ifAuthenticated())
-// 		return;
-// 	std::map<std::string, bool> &aMap = client.getFaceOutheDirt();
-// 	std::istringstream iss(message);
-// 	std::vector<std::string> parts;
-// 	std::string part;
-// 	while (std::getline(iss, part, ' '))
-// 		parts.push_back(part);
-// 	// Check minimum parameter count
-// 	if (parts.size() < 5 || parts[0] != "USER")
-// 	{
-// 		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
-// 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
-// 		return;
-// 	}
-// 	std::string username = parts[1];
-// 	std::string unused1 = parts[2]; // This is usually "0"
-// 	std::string unused2 = parts[3]; // This is usually "*"
-// 	std::string realname = message.substr(message.find(':') + 1);
-
-// 	// Check if the user is already registered
-// 	std::map<std::string, bool>::iterator bt = aMap.find("user");
-// 	if (bt != aMap.end())
-// 	{
-// 		if (bt->second == true)
-// 		{
-// 			std::string errMsg = std::string(RED) + ":" + this->hostname + " 462 " + client.getIPadd() + " :You may not reregister\r\n" + std::string(EN);
-// 			send(fd, errMsg.c_str(), errMsg.size(), 0);
-// 			return;
-// 		}
-// 	}
-// 	if (username.empty() || realname.empty() || isValidNickname(username) == false)
-// 	{
-// 		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
-// 		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
-// 		return;
-// 	}
-// 	// Register the user
-// 	client.setUserName(username, realname);
-// 	if (!client.ifAuthenticated())
-// 		sendWelcome(fd, client);
-// 	return;
-// }
-
 void Server::processUser(int fd, std::string& username, std::string& ident, std::string& host, std::string& realname)
 {
 	// Split the message into parts
@@ -754,12 +698,6 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 		return;
 	}
-	// if (channel.isBanned(client.getNickname()))
-	// {
-	// 	std::string errorMsg = std::string(RED) + "474" + client.getNickname() + " :You are banned from this channel\r\n" + std::string(WHI);
-	//     send(fd, errorMsg.c_str(), errorMsg.size(), 0);
-	//     return;
-	// }
 
 	// 4. Add the client to the channel
 	channel.addClient(fd);
