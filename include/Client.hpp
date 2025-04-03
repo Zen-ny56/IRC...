@@ -10,6 +10,7 @@ private:
 	std::string nickName;
 	int fd; //-> client file descriptor
 	std::string IPadd; //-> client ip address
+	bool needsCap;
 	std::map<std::string, bool> faceouthedirt;
 
 public:
@@ -24,5 +25,6 @@ public:
 	std::string getIPadd();
 	std::string getUserName();
 	std::string getNickname();
+	void setNeedsCap(bool condition);
 
 };

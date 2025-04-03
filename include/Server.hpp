@@ -89,7 +89,8 @@ class Server //-> class for server
         void parse_line(int fd, const std::string& line);
         void receivePong(int fd);
         void sendPingToClients();
-
+        int checkCap(const std::string& line);
+        std::vector<std::string> Server::storeInputLines(const std::string &message);
 };
 
 bool isNumber(const std::string &str);

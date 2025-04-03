@@ -47,3 +47,8 @@ void Client::setUserName(std::string userName, std::string realName)
     std::map<std::string, bool>::iterator it = faceouthedirt.find("user");
     it->second = true;
 }
+
+void Client::setNeedsCap(bool condition)
+{
+    this->needsCap = true;
+}

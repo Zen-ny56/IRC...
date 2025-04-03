@@ -74,6 +74,7 @@ void Server::parse_line(int fd, const std::string &line)
     std::string command, type;
     
 	stream >> command;
+	std::cout << command << std::endl;
     if (command == "NICK")
 	{
         std::string nickname;
@@ -85,7 +86,6 @@ void Server::parse_line(int fd, const std::string &line)
 	{
         std::string user, ident, host, realname;
         stream >> user >> ident >> host;
-
         // Extract the real name (everything after ':')
         std::getline(stream, realname); 
         size_t pos = realname.find(':'); 
@@ -112,6 +112,24 @@ void Server::parse_line(int fd, const std::string &line)
 			processCapReq(fd, requestedCaps); // Call existing function
 		}
 	}
+}
+
+bool Server::checkCap(const std::string &line)
+{
+   st
+}
+
+
+std::vector<std::string> Server::storeInputLines(const std::string &message)
+{
+    std::vector<std::string> lines;
+    std::istringstream inputStream(message);
+    std::string line;
+
+    while (std::getline(inputStream, line))
+        lines.push_back(line);
+
+    return lines;
 }
 
 void Server::sendPingToClients()
@@ -208,13 +226,11 @@ void Server::receiveNewData(int fd)
 	memset(buff, 0, sizeof(buff)); //-> clear the buffer
 
 	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1, 0); //-> receive the data
-	sendPingToClients();
+	// sendPingToClients();
 	std::vector<Client>::iterator it = getClient(fd);
 	if (it == clients.end())
 		throw std::runtime_error("Client was not found]\n");
 	Client &client = (*this)[it];
-	if (!client.ifAuthenticated())
-		return;
 	if (bytes <= 0)
 	{ //-> check if the client disconnected
 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
@@ -225,32 +241,40 @@ void Server::receiveNewData(int fd)
 	{ //-> print the received data
 		buff[bytes] = '\0';
 		std::string message(buff);
-		std::istringstream inputStream(message);
-		std::string line;
-		while (std::getline(inputStream, line))
-			parse_line(fd, line);
-		if (message.rfind("INVITE ", 0) == 0)
-			inviteCommand(fd, message);
-		if (message.rfind("KICK ", 0) == 0)
-			kickCommand(fd, message);
-		if (message.rfind("TOPIC ", 0) == 0)
-			topicCommand(fd, message);
-		if (message.find("CAP REQ") != std::string::npos)
-			processCapReq(fd, message);
-		if (message.find("QUIT", 0) == 0)
-			processQuit(fd, message);
-		if (message.find("PONG", 0) == 0)
-			receivePong(fd);
-		if (message.find("JOIN", 0) == 0)
-			handleChannel(fd, message); /*Function where JOIN is handled*/
-		if (message.find("PRIVMSG", 0) == 0)
-			processPrivmsg(fd, message);
-		if (message.find("AUTHENTICATE") != std::string::npos)
-			processSasl(fd, message);
-		if (message.find("CAP END") != std::string::npos)
-			capEnd(fd);
-		if (message.find("MODE") != std::string::npos)
-			handleMode(fd, message);
+	    std::vector<std::string> lines = storeInputLines(message);
+		if (client.ifAuthenticated())
+		{
+			
+			while (std::getline(tempStream, line))
+			{
+				if ()
+				parse_line(fd, line);
+			}
+			// while (std::getline(inputStream, line))
+		}
+		else
+		{
+			if (message.rfind("INVITE ", 0) == 0)
+				inviteCommand(fd, message);
+			if (message.rfind("KICK ", 0) == 0)
+				kickCommand(fd, message);
+			if (message.rfind("TOPIC ", 0) == 0)
+				topicCommand(fd, message);
+			if (message.find("QUIT", 0) == 0)
+				processQuit(fd, message);
+			if (message.find("PONG", 0) == 0)
+				receivePong(fd);
+			if (message.find("JOIN", 0) == 0)
+				handleChannel(fd, message); /*Function where JOIN is handled*/
+			if (message.find("PRIVMSG", 0) == 0)
+				processPrivmsg(fd, message);
+			if (message.find("AUTHENTICATE") != std::string::npos)
+				processSasl(fd, message);
+			if (message.find("CAP END") != std::string::npos)
+				capEnd(fd);
+			if (message.find("MODE") != std::string::npos)
+				handleMode(fd, message);
+		}
 		else
 		{
 			std::string buff = "Invalid Command: try again!\n";
@@ -348,6 +372,7 @@ void Server::acceptNewClient()
 
 	cli.setFd(incofd);							//-> set the client file descriptor
 	cli.setIpAdd(inet_ntoa((cliadd.sin_addr))); //-> convert the ip address to string and set it
+	cli.setNeedsCap(false);
 	clients.push_back(cli);						//-> add the client to the vector of clients
 	fds.push_back(newPoll);						//-> add the client socket to the pollfd
 	clientLastPing[cli.getFd()] = time(NULL);
@@ -438,12 +463,15 @@ void Server::processCapReq(int fd, const std::string &message)
 
 void Server::validatePassword(int fd, const std::string &receivedPassword)
 {
+	std::cout << "Do we ne" << std::endl;
 	std::vector<Client>::iterator it = getClient(fd);
 	if (it == clients.end())
 		throw std::runtime_error("No client was found\n");
 	Client &client = (*this)[it];
 	if (!client.ifAuthenticated())
+	{
 		return;
+	}
 	std::map<std::string, bool> &aMap = client.getFaceOutheDirt();
 	std::map<std::string, bool>::iterator bt = aMap.find("pass");
 	if (bt != aMap.end())
@@ -463,6 +491,7 @@ void Server::validatePassword(int fd, const std::string &receivedPassword)
 	}
 	if (!receivedPassword.compare(this->password))
 	{
+		std::cout << "aa" << std::endl;
 		bt->second = true;
 		return; // Authentication successful
 	}
