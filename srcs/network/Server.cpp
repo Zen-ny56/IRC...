@@ -4,43 +4,43 @@ Server::Server() { serSocketFd = -1; }
 
 void Server::clearClients(int fd)
 {
-    // Remove from pollfd vector
-    for (size_t i = 0; i < fds.size(); i++)
-    { 
-        if (fds[i].fd == fd)
-        {
-            fds.erase(fds.begin() + i);
-            break;
-        }
-    }
+	// Remove from pollfd vector
+	for (size_t i = 0; i < fds.size(); i++)
+	{
+		if (fds[i].fd == fd)
+		{
+			fds.erase(fds.begin() + i);
+			break;
+		}
+	}
 
-    // Remove from clients vector and all channels
-    for (size_t i = 0; i < clients.size(); i++)
-    { 
-        if (clients[i].getFd() == fd)
-        {
-            // Remove client from all channels
-            std::string nickname = clients[i].getNickname();
-            for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
-            {
-                Channel &channel = it->second;
-                if (channel.isInChannel(fd))
-                {
-                    channel.removeClient(fd);
-                    // Broadcast quit message to channel members
-                    std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
-                    channel.broadcastToChannel(quitMsg);
-                    // Remove channel if empty
-                    if (channel.listUsers().empty())
-                        channels.erase(it->first);
-                }
-            }
-            // Remove nickname from map
-            nicknameMap.erase(nickname);
-            clients.erase(clients.begin() + i);
-            break;
-        }
-    }
+	// Remove from clients vector and all channels
+	for (size_t i = 0; i < clients.size(); i++)
+	{
+		if (clients[i].getFd() == fd)
+		{
+			// Remove client from all channels
+			std::string nickname = clients[i].getNickname();
+			for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
+			{
+				Channel &channel = it->second;
+				if (channel.isInChannel(fd))
+				{
+					channel.removeClient(fd);
+					// Broadcast quit message to channel members
+					std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
+					channel.broadcastToChannel(quitMsg);
+					// Remove channel if empty
+					if (channel.listUsers().empty())
+						channels.erase(it->first);
+				}
+			}
+			// Remove nickname from map
+			nicknameMap.erase(nickname);
+			clients.erase(clients.begin() + i);
+			break;
+		}
+	}
 }
 
 bool Server::signal = false; //-> initialize the static boolean
@@ -387,6 +387,42 @@ void Server::processUser(int fd, const std::string &message)
 	return;
 }
 
+void Server::clientWelcomeMSG(int fd, Client &client)
+{
+	if (fd == 3)
+		return ;
+	std::ostringstream oss;
+	oss << this->hostname;
+	std::string buff =  ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;34m===============================================\033[0m" + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;32m          IRC Command List and Format        \033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;34m===============================================\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : CAP LS  | \033[1;37m /CAP LS\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : PASS    | \033[1;37m <password>\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : NICK    | \033[1;37m <nickname>\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : USER    | \033[1;37m <username> <hostname> <servername> <realname>\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : INVITE  | \033[1;37m <nickname> <channel>\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : KICK    | \033[1;37m <channel> <nickname> [<reason>]\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : TOPIC   | \033[1;37m <channel> [<topic>]\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : CAP REQ | \033[1;37m <capability>\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : QUIT    | \033[1;37m [<message>]\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : JOIN    | \033[1;37m <channel> [<key>]\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : PRIVMSG | \033[1;37m <target> <message>\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : AUTHENTICATE | \033[1;37m <data>\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : CAP END | \033[1;37m /CAP END\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : MODE    | \033[1;37m <target> <mode>\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " :\033[1;37m  Available modes:\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " :\033[1;36m    i\033[0m - \033[1;37mSet/remove Invite-only channel\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " :\033[1;36m    t\033[0m - \033[1;37mSet/remove the restrictions of the TOPIC command to channel operators\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " :\033[1;36m    k\033[0m - \033[1;37mSet/remove the channel key (password)\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " :\033[1;36m    o\033[0m - \033[1;37mGive/take channel operator privilege\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " :\033[1;36m    l\033[0m - \033[1;37mSet/remove the user limit to channel\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;34m===============================================\033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;32m            End of Command List               \033[0m"  + "\n"
+	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;34m===============================================\033[0m"  + "\n"
+	+ ":" + oss.str() + " 376 " + client.getNickname() + ":End of message of the day."  + "\n";
+	send(fd, buff.c_str(), buff.size(), 0);
+}
+
 void Server::sendWelcome(int fd, Client &client)
 {
 	// 1. RPL_WELCOME (001)
@@ -409,34 +445,7 @@ void Server::sendWelcome(int fd, Client &client)
 	std::string isupportMsg = std::string(YEL) + ":" + this->hostname + " 005 " + client.getNickname() + " irrsi (" + this->hostname + ") :are supported by this server\r\n";
 	isupportMsg += "CHANTYPES=# PREFIX=(+o+k+t+l+i-o-k-t-l-i) CHANLIMIT=#:100 MODES=5 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
 	send(fd, isupportMsg.c_str(), isupportMsg.size(), 0);
-
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;32m          IRC Command List and Format        \033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP LS  | \033[1;37m /CAP LS\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : PASS    | \033[1;37m <password>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : NICK    | \033[1;37m <nickname>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : USER    | \033[1;37m <username> <hostname> <servername> <realname>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : INVITE  | \033[1;37m <nickname> <channel>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : KICK    | \033[1;37m <channel> <nickname> [<reason>]\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : TOPIC   | \033[1;37m <channel> [<topic>]\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP REQ | \033[1;37m <capability>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : QUIT    | \033[1;37m [<message>]\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : JOIN    | \033[1;37m <channel> [<key>]\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : PRIVMSG | \033[1;37m <target> <message>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : AUTHENTICATE | \033[1;37m <data>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP END | \033[1;37m /CAP END\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : MODE    | \033[1;37m <target> <mode>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;37m  Available modes:\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    i\033[0m - \033[1;37mSet/remove Invite-only channel\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    t\033[0m - \033[1;37mSet/remove the restrictions of the TOPIC command to channel operators\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    k\033[0m - \033[1;37mSet/remove the channel key (password)\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    o\033[0m - \033[1;37mGive/take channel operator privilege\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    l\033[0m - \033[1;37mSet/remove the user limit to channel\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;32m            End of Command List               \033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 376 " + client.getNickname() << ":End of message of the day." << std::endl;
+	clientWelcomeMSG(client.getFd(), client);
 }
 
 void Server::processNickUser(int fd, const std::string &message)

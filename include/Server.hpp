@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stack>
 #include <queue>
+#include <ctime>
 #include <vector> //-> for vector
 #include <sys/socket.h> //-> for socket()
 #include <sys/types.h> //-> for socket()
@@ -84,6 +85,7 @@ class Server //-> class for server
         void inviteCommand(int fd, std::string const &message);
         static bool is_base64(unsigned char c);
         std::string base64_decode(const std::string &encoded_string);
+        void clientWelcomeMSG(int fd, Client &client);
 
 };
 
