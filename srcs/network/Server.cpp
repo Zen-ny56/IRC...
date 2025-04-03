@@ -111,6 +111,7 @@ void Server::parse_line(int fd, const std::string &line)
 			std::getline(stream, requestedCaps);
 			processCapReq(fd, requestedCaps); // Call existing function
 		}
+	}
 }
 
 void Server::sendPingToClients()
@@ -228,27 +229,27 @@ void Server::receiveNewData(int fd)
 		std::string line;
 		while (std::getline(inputStream, line))
 			parse_line(fd, line);
-		else if (message.rfind("INVITE ", 0) == 0)
+		if (message.rfind("INVITE ", 0) == 0)
 			inviteCommand(fd, message);
-		else if (message.rfind("KICK ", 0) == 0)
+		if (message.rfind("KICK ", 0) == 0)
 			kickCommand(fd, message);
-		else if (message.rfind("TOPIC ", 0) == 0)
+		if (message.rfind("TOPIC ", 0) == 0)
 			topicCommand(fd, message);
-		else if (message.find("CAP REQ") != std::string::npos)
+		if (message.find("CAP REQ") != std::string::npos)
 			processCapReq(fd, message);
-		else if (message.find("QUIT", 0) == 0)
+		if (message.find("QUIT", 0) == 0)
 			processQuit(fd, message);
-		else if (message.find("PONG", 0) == 0)
+		if (message.find("PONG", 0) == 0)
 			receivePong(fd);
-		else if (message.find("JOIN", 0) == 0)
+		if (message.find("JOIN", 0) == 0)
 			handleChannel(fd, message); /*Function where JOIN is handled*/
-		else if (message.find("PRIVMSG", 0) == 0)
+		if (message.find("PRIVMSG", 0) == 0)
 			processPrivmsg(fd, message);
-		else if (message.find("AUTHENTICATE") != std::string::npos)
+		if (message.find("AUTHENTICATE") != std::string::npos)
 			processSasl(fd, message);
-		else if (message.find("CAP END") != std::string::npos)
+		if (message.find("CAP END") != std::string::npos)
 			capEnd(fd);
-		else if (message.find("MODE") != std::string::npos)
+		if (message.find("MODE") != std::string::npos)
 			handleMode(fd, message);
 		else
 		{
@@ -412,7 +413,7 @@ void Server::serverInit(int port, std::string pass)
 
 void Server::sendCapabilities(int fd)
 {
-	std::string capMessage = "CAP * LS :multi-prefix\r\n";
+	std::string capMessage = "CAP * LS : CHANNEL_MODES multi-prefix\r\n";
 	send(fd, capMessage.c_str(), capMessage.size(), 0);
 	return;
 }
@@ -435,7 +436,7 @@ void Server::processCapReq(int fd, const std::string &message)
 	}
 }
 
-void Server::validatePassword(int fd, const std::string &message)
+void Server::validatePassword(int fd, const std::string &receivedPassword)
 {
 	std::vector<Client>::iterator it = getClient(fd);
 	if (it == clients.end())
