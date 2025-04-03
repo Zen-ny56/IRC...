@@ -50,5 +50,20 @@ void Client::setUserName(std::string userName, std::string realName)
 
 void Client::setNeedsCap(bool condition)
 {
-    this->needsCap = true;
+    this->needsCap = condition;
+}
+
+bool Client::getNeedsCap()
+{
+    return this->needsCap;
+}
+
+void Client::setCapisSuccess(bool condition)
+{
+    this->capisSuccess = condition;
+}
+
+bool Client::getCapisSuccess()
+{
+    return this->capisSuccess;
 }

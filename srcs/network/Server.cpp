@@ -67,20 +67,20 @@ void Server::closeFds()
 	}
 }
 
-
-void Server::parse_line(int fd, const std::string &line)
+int Server::authenticate(Client& client, const std::string &line, bool needsCap)
 {
+	(void)needsCap;
     std::istringstream stream(line);
     std::string command, type;
     
 	stream >> command;
-	std::cout << command << std::endl;
+	// std::cout << command << std::endl;
     if (command == "NICK")
 	{
         std::string nickname;
         stream >> nickname;
         std::cout << "Nickname: " << nickname << std::endl;
-        processNickUser(fd, nickname);
+        processNickUser(client, nickname);
     } 
     else if (command == "USER")
 	{
@@ -91,134 +91,99 @@ void Server::parse_line(int fd, const std::string &line)
         size_t pos = realname.find(':'); 
         if (pos != std::string::npos)
             realname = realname.substr(pos + 1);
-        processUser(fd, user, ident, host, realname);
+        processUser(client, user, ident, host, realname);
     }
 	else if (command == "PASS")
 	{
         std::string password;
         stream >> password;
-        validatePassword(fd, password); // Call existing function
+        validatePassword(client, password); // Call existing function
     } 
     else if (command == "CAP")
 	{
 		std::string capCommand;
 		stream >> capCommand;
         if (capCommand == "LS")
-            sendCapabilities(fd); // Call existing function
+            sendCapabilities(client.getFd()); // Call existing function
         else if (capCommand == "REQ")
 		{
 			std::string requestedCaps;
 			std::getline(stream, requestedCaps);
-			processCapReq(fd, requestedCaps); // Call existing function
+			processCapReq(client.getFd(), requestedCaps); // Call existing function
+		}
+		else if (capCommand == "END")
+		{
+			if (!client.ifAuthenticated())
+			{
+				client.setCapisSuccess(true);
+				sendWelcome(client.getFd(), client);
+			}
 		}
 	}
+	return (0);
 }
 
-bool Server::checkCap(const std::string &line)
+void Server::authenticate(Client& client, const std::string &line)
 {
-   st
+    std::istringstream stream(line);
+    std::string command, type;
+    
+	stream >> command;
+	std::cout << "Hoped into the wrong place" << std::endl;
+	// std::cout << command << std::endl;
+    if (command == "NICK")
+	{
+        std::string nickname;
+        stream >> nickname;
+        std::cout << "Nickname: " << nickname << std::endl;
+        processNickUser(client, nickname);
+		if (!client.ifAuthenticated())
+			sendWelcome(client.getFd(), client);
+    } 
+    else if (command == "USER")
+	{
+        std::string user, ident, host, realname;
+        stream >> user >> ident >> host;
+        // Extract the real name (everything after ':')
+        std::getline(stream, realname); 
+        size_t pos = realname.find(':'); 
+        if (pos != std::string::npos)
+            realname = realname.substr(pos + 1);
+        processUser(client, user, ident, host, realname);
+		if (!client.ifAuthenticated())
+			sendWelcome(client.getFd(), client);
+    }
+	else if (command == "PASS")
+	{
+        std::string password;
+        stream >> password;
+        validatePassword(client, password); // Call existing function
+		if (!client.ifAuthenticated())
+			sendWelcome(client.getFd(), client);
+    } 
 }
 
-
-std::vector<std::string> Server::storeInputLines(const std::string &message)
+std::vector<std::string> Server::storeInputLines(Client& client, const std::string &message)
 {
     std::vector<std::string> lines;
     std::istringstream inputStream(message);
     std::string line;
 
     while (std::getline(inputStream, line))
+	{
+		std::cout << line << std::endl;
         lines.push_back(line);
-
+	}
+	// if (lines.size() >= 3 && /*lines[0].find("CAP LS") == 0 && */lines[1].find("PASS ") == 0 && lines[2].find("NICK ") == 0 && lines[3].find("USER ") == 0)
+    // {
+		//     client.setNeedsCap(true);
+		// }
+	if (lines[0].find("CAP LS") == 0)
+	{
+		client.setNeedsCap(true);
+	}
     return lines;
 }
-
-void Server::sendPingToClients()
-{
-    time_t now = time(NULL);
-    for (std::map<int, time_t>::iterator it = clientLastPing.begin(); it != clientLastPing.end(); ++it)
-    {
-        int fd = it->first;
-        if (now - it->second > 60) // No PONG in 60 seconds
-        {
-            std::cout << "Client <" << fd << "> timed out. Disconnecting." << std::endl;
-            close(fd); // Disconnect client
-            clearClients(fd); // Remove client from tracking
-        }
-        else if (now - it->second > 30) // Send PING if no response in 30 seconds
-        {
-            std::string pingMessage = "PING :ServerCheck\r\n";
-            send(fd, pingMessage.c_str(), pingMessage.length(), 0);
-            std::cout << "Sent PING to client <" << fd << ">." << std::endl;
-        }
-    }
-}
-
-
-// void Server::receiveNewData(int fd)
-// {
-// 	char buff[1024];			   //-> buffer for the received data
-// 	memset(buff, 0, sizeof(buff)); //-> clear the buffer
-
-// 	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1, 0); //-> receive the data
-// 	sendPingToClients();
-// 	if (bytes <= 0)
-// 	{ //-> check if the client disconnected
-// 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
-// 		clearClients(fd); //-> clear the client
-// 		close(fd);		  //-> close the client socket
-// 	}
-// 	else
-// 	{ //-> print the received data
-// 		buff[bytes] = '\0';
-// 		std::string message(buff);
-// 		if (message.find("CAP LS") != std::string::npos)
-// 			sendCapabilities(fd);
-// 		else if (message.rfind("PASS ", 0) == 0)
-// 			validatePassword(fd, message);
-// 		else if (message.rfind("NICK ", 0) == 0)
-// 		{
-// 			std::istringstream inputStream(message);
-// 			std::string line;
-// 			while (std::getline(inputStream, line))
-// 				parse_line(fd, line);
-// 		}
-// 		else if (message.rfind("USER ", 0) == 0)
-// 		{
-// 			std::istringstream inputStream(message);
-// 			std::string line;
-// 			while (std::getline(inputStream, line))
-// 				parse_line(fd, line);
-// 		}
-// 		else if (message.rfind("INVITE ", 0) == 0)
-// 			inviteCommand(fd, message);
-// 		else if (message.rfind("KICK ", 0) == 0)
-// 			kickCommand(fd, message);
-// 		else if (message.rfind("TOPIC ", 0) == 0)
-// 			topicCommand(fd, message);
-// 		else if (message.find("CAP REQ") != std::string::npos)
-// 			processCapReq(fd, message);
-// 		else if (message.find("QUIT", 0) == 0)
-// 			processQuit(fd, message);
-// 		else if (message.find("PONG", 0) == 0)
-// 			receivePong(fd);
-// 		else if (message.find("JOIN", 0) == 0)
-// 			handleChannel(fd, message); /*Function where JOIN is handled*/
-// 		else if (message.find("PRIVMSG", 0) == 0)
-// 			processPrivmsg(fd, message);
-// 		else if (message.find("AUTHENTICATE") != std::string::npos)
-// 			processSasl(fd, message);
-// 		else if (message.find("CAP END") != std::string::npos)
-// 			capEnd(fd);
-// 		else if (message.find("MODE") != std::string::npos)
-// 			handleMode(fd, message);
-// 		else
-// 		{
-// 			std::string buff = "Invalid Command: try again!\n";
-// 			send(fd, buff.c_str(), buff.size(), 0);
-// 			// std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
-// 		} // handling authentication error to be displayed to the client.
-// 	}
-// }
 
 void Server::receiveNewData(int fd)
 {
@@ -241,39 +206,39 @@ void Server::receiveNewData(int fd)
 	{ //-> print the received data
 		buff[bytes] = '\0';
 		std::string message(buff);
-	    std::vector<std::string> lines = storeInputLines(message);
-		if (client.ifAuthenticated())
+	    std::vector<std::string> lines = storeInputLines(client, message);
+		if (client.getNeedsCap() == true && client.getCapisSuccess() == false)
 		{
 			
-			while (std::getline(tempStream, line))
-			{
-				if ()
-				parse_line(fd, line);
-			}
-			// while (std::getline(inputStream, line))
+			for (size_t i = 0; i < lines.size(); i++)
+				authenticate(client, lines[i], client.getNeedsCap());
 		}
-		else
+		else if (client.getNeedsCap() == false && client.ifAuthenticated())
 		{
-			if (message.rfind("INVITE ", 0) == 0)
-				inviteCommand(fd, message);
-			if (message.rfind("KICK ", 0) == 0)
-				kickCommand(fd, message);
-			if (message.rfind("TOPIC ", 0) == 0)
-				topicCommand(fd, message);
-			if (message.find("QUIT", 0) == 0)
-				processQuit(fd, message);
-			if (message.find("PONG", 0) == 0)
-				receivePong(fd);
-			if (message.find("JOIN", 0) == 0)
-				handleChannel(fd, message); /*Function where JOIN is handled*/
-			if (message.find("PRIVMSG", 0) == 0)
-				processPrivmsg(fd, message);
-			if (message.find("AUTHENTICATE") != std::string::npos)
-				processSasl(fd, message);
-			if (message.find("CAP END") != std::string::npos)
-				capEnd(fd);
-			if (message.find("MODE") != std::string::npos)
-				handleMode(fd, message);
+			for (size_t i = 0; i < lines.size(); i++)
+            	authenticate(client, lines[i]);
+		}
+		else if (!client.ifAuthenticated())
+		{
+			for (size_t i = 0; i < lines.size(); i++)
+        	{
+            const std::string &line = lines[i];
+
+            if (line.rfind("INVITE ", 0) == 0)
+                inviteCommand(fd, line);
+            else if (line.rfind("KICK ", 0) == 0)
+                kickCommand(fd, line);
+            else if (line.rfind("TOPIC ", 0) == 0)
+                topicCommand(fd, line);
+            else if (line.find("QUIT", 0) == 0)
+                processQuit(fd, line);
+            else if (line.find("JOIN", 0) == 0)
+                handleChannel(fd, line);
+            else if (line.find("PRIVMSG", 0) == 0)
+                processPrivmsg(fd, line);
+            else if (line.find("MODE") != std::string::npos)
+                handleMode(fd, line);
+			}
 		}
 		else
 		{
@@ -284,12 +249,12 @@ void Server::receiveNewData(int fd)
 	}
 }
 
-void Server::receivePong(int fd)
-{
-	time_t currentTime = time(NULL); // Get current timestamp
-    std::map<int, time_t>::iterator it = clientLastPing.find(fd);
-	it->second = currentTime;
-}
+// void Server::receivePong(int fd)
+// {
+// 	time_t currentTime = time(NULL); // Get current timestamp
+//     std::map<int, time_t>::iterator it = clientLastPing.find(fd);
+// 	it->second = currentTime;
+// }
 
 void Server::reverseRotate(std::stack<std::string> &s)
 {
@@ -375,7 +340,7 @@ void Server::acceptNewClient()
 	cli.setNeedsCap(false);
 	clients.push_back(cli);						//-> add the client to the vector of clients
 	fds.push_back(newPoll);						//-> add the client socket to the pollfd
-	clientLastPing[cli.getFd()] = time(NULL);
+	// clientLastPing[cli.getFd()] = time(NULL);
 	// authenticatedClients[incofd] = false;
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
@@ -438,40 +403,29 @@ void Server::serverInit(int port, std::string pass)
 
 void Server::sendCapabilities(int fd)
 {
-	std::string capMessage = "CAP * LS : CHANNEL_MODES multi-prefix\r\n";
+	std::string capMessage = "CAP * LS :multi-prefix\r\n";
 	send(fd, capMessage.c_str(), capMessage.size(), 0);
 	return;
 }
 
 void Server::processCapReq(int fd, const std::string &message)
 {
-	if (message.find("CAP REQ") != std::string::npos)
+	std::cout <<  "---" << message << "---" << std::endl;
+	if (message.find(":multi-prefix") != std::string::npos)
 	{
-		if (message.find("multi-prefix") != std::string::npos)
-		{
-			std::string capNak = "CAP * ACK :multi-prefix\r\n"; // Reject multi-prefix
-			send(fd, capNak.c_str(), capNak.size(), 0);
-			return;
-		}
-		if (message.find("sasl") != std::string::npos)
-		{
-			std::string capAck = "CAP * NAK :sasl\r\n"; // Only acknowledge SASL
-			send(fd, capAck.c_str(), capAck.size(), 0);
-		}
+		std::string capNak = "CAP * ACK :multi-prefix\r\n"; // Acknowledge multi-prefix
+		send(fd, capNak.c_str(), capNak.size(), 0);
+		return;
+	}
+	if (message.find("sasl") != std::string::npos)
+	{
+		std::string capAck = "CAP * NAK :sasl\r\n"; // Reject  SASL
+		send(fd, capAck.c_str(), capAck.size(), 0);
 	}
 }
 
-void Server::validatePassword(int fd, const std::string &receivedPassword)
+void Server::validatePassword(Client& client, const std::string &receivedPassword)
 {
-	std::cout << "Do we ne" << std::endl;
-	std::vector<Client>::iterator it = getClient(fd);
-	if (it == clients.end())
-		throw std::runtime_error("No client was found\n");
-	Client &client = (*this)[it];
-	if (!client.ifAuthenticated())
-	{
-		return;
-	}
 	std::map<std::string, bool> &aMap = client.getFaceOutheDirt();
 	std::map<std::string, bool>::iterator bt = aMap.find("pass");
 	if (bt != aMap.end())
@@ -479,48 +433,39 @@ void Server::validatePassword(int fd, const std::string &receivedPassword)
 		if (bt->second == true)
 		{
 			std::string errMsg = std::string(RED) + ":" + this->hostname + " 462 " + client.getIPadd() + " :You may not reregister\r\n" + std::string(EN);
-			send(fd, errMsg.c_str(), errMsg.size(), 0);
+			send(client.getFd(), errMsg.c_str(), errMsg.size(), 0);
 			return;
 		}
 	}
 	if (receivedPassword.empty())
 	{
 		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " PASS :Not enough parameters\r\n" + std::string(EN);
-		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
+		send(client.getFd(), errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
 	if (!receivedPassword.compare(this->password))
 	{
-		std::cout << "aa" << std::endl;
 		bt->second = true;
 		return; // Authentication successful
 	}
 	else
 	{
 		std::string errMsg = std::string(RED) + ":" + this->hostname + " 464 " + client.getIPadd() + " :Password incorrect\r\n" + std::string(EN);
-		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_PASSWDMISMATCH
+		send(client.getFd(), errMsg.c_str(), errMsg.size(), 0); // ERR_PASSWDMISMATCH
 		return;
 	}
-	if (!client.ifAuthenticated())
-		sendWelcome(fd, client);
 	return; // Authentication failed
 }
 
-void Server::processUser(int fd, std::string& username, std::string& ident, std::string& host, std::string& realname)
+void Server::processUser(Client& client, std::string& username, std::string& ident, std::string& host, std::string& realname)
 {
 	// Split the message into parts
-	std::vector<Client>::iterator it = getClient(fd);
-	if (it == clients.end())
-		throw std::runtime_error("Client was not found]\n");
-	Client &client = (*this)[it];
-	if (!client.ifAuthenticated())
-		return;
 	std::map<std::string, bool> &aMap = client.getFaceOutheDirt();
 	// Check minimum parameter count
 	if (ident.empty() || username.empty() || host.empty() || realname.empty() || isValidNickname(username) == false)
 	{
 		std::string errMsg = std::string(RED) + ":" + this->hostname + " 461 " + client.getIPadd() + " USER :Not enough parameters\r\n" + std::string(EN);
-		send(fd, errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
+		send(client.getFd(), errMsg.c_str(), errMsg.size(), 0); // ERR_NEEDMOREPARAMS
 		return;
 	}
 	// Check if the user is already registered
@@ -530,14 +475,12 @@ void Server::processUser(int fd, std::string& username, std::string& ident, std:
 		if (bt->second == true)
 		{
 			std::string errMsg = std::string(RED) + ":" + this->hostname + " 462 " + client.getIPadd() + " :You may not reregister\r\n" + std::string(EN);
-			send(fd, errMsg.c_str(), errMsg.size(), 0);
+			send(client.getFd(), errMsg.c_str(), errMsg.size(), 0);
 			return;
 		}
 	}
 	// Register the user
 	client.setUserName(username, realname);
-	if (!client.ifAuthenticated())
-		sendWelcome(fd, client);
 	return;
 }
 
@@ -564,130 +507,64 @@ void Server::sendWelcome(int fd, Client &client)
 	isupportMsg += "CHANTYPES=# PREFIX=(+o+k+t+l+i-o-k-t-l-i) CHANLIMIT=#:100 MODES=5 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
 	send(fd, isupportMsg.c_str(), isupportMsg.size(), 0);
 
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;32m          IRC Command List and Format        \033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP LS  | \033[1;37m /CAP LS\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : PASS    | \033[1;37m <password>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : NICK    | \033[1;37m <nickname>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : USER    | \033[1;37m <username> <hostname> <servername> <realname>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : INVITE  | \033[1;37m <nickname> <channel>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : KICK    | \033[1;37m <channel> <nickname> [<reason>]\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : TOPIC   | \033[1;37m <channel> [<topic>]\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP REQ | \033[1;37m <capability>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : QUIT    | \033[1;37m [<message>]\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : JOIN    | \033[1;37m <channel> [<key>]\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : PRIVMSG | \033[1;37m <target> <message>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : AUTHENTICATE | \033[1;37m <data>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP END | \033[1;37m /CAP END\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : MODE    | \033[1;37m <target> <mode>\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;37m  Available modes:\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    i\033[0m - \033[1;37mSet/remove Invite-only channel\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    t\033[0m - \033[1;37mSet/remove the restrictions of the TOPIC command to channel operators\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    k\033[0m - \033[1;37mSet/remove the channel key (password)\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    o\033[0m - \033[1;37mGive/take channel operator privilege\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    l\033[0m - \033[1;37mSet/remove the user limit to channel\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;32m            End of Command List               \033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
-	std::cout << ":" << this->hostname << " 376 " + client.getNickname() << ":End of message of the day." << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;32m          IRC Command List and Format        \033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP LS  | \033[1;37m /CAP LS\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : PASS    | \033[1;37m <password>\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : NICK    | \033[1;37m <nickname>\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : USER    | \033[1;37m <username> <hostname> <servername> <realname>\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : INVITE  | \033[1;37m <nickname> <channel>\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : KICK    | \033[1;37m <channel> <nickname> [<reason>]\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : TOPIC   | \033[1;37m <channel> [<topic>]\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP REQ | \033[1;37m <capability>\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : QUIT    | \033[1;37m [<message>]\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : JOIN    | \033[1;37m <channel> [<key>]\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : PRIVMSG | \033[1;37m <target> <message>\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : AUTHENTICATE | \033[1;37m <data>\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : CAP END | \033[1;37m /CAP END\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : MODE    | \033[1;37m <target> <mode>\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;37m  Available modes:\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    i\033[0m - \033[1;37mSet/remove Invite-only channel\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    t\033[0m - \033[1;37mSet/remove the restrictions of the TOPIC command to channel operators\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    k\033[0m - \033[1;37mSet/remove the channel key (password)\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    o\033[0m - \033[1;37mGive/take channel operator privilege\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " :\033[1;36m    l\033[0m - \033[1;37mSet/remove the user limit to channel\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;32m            End of Command List               \033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
+	// std::cout << ":" << this->hostname << " 376 " + client.getNickname() << ":End of message of the day." << std::endl;
 }
 
-void Server::processNickUser(int fd, const std::string &nickname)
+void Server::processNickUser(Client& client, const std::string &nickname)
 {
 	// NICK command
-	std::vector<Client>::iterator it = getClient(fd);
-	if (it == clients.end())
-		throw std::runtime_error("Client was not found\n");
-	Client &client = (*this)[it]; 
-	if (!client.ifAuthenticated())
-		return;
 	if (nickname.empty())
 	{
 		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 431 " + client.getIPadd() + " :No nickname given\r\n" + std::string(EN);
-		send(fd, errorMsg.c_str(), errorMsg.size(), 0); // ERR_NONICKNAMEGIVEN
+		send(client.getFd(), errorMsg.c_str(), errorMsg.size(), 0); // ERR_NONICKNAMEGIVEN
 		return;
 	}
 	if (!isValidNickname(nickname))
 	{
 		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 432 " + client.getIPadd() + " " + nickname + " :Erroneous nickname\r\n" + std::string(EN); // ERR_ERRONEUSNICKNAME
-		send(fd, errorMsg.c_str(), errorMsg.length(), 0);
+		send(client.getFd(), errorMsg.c_str(), errorMsg.length(), 0);
 		return;
 	}
 	if (nicknameMap.find(nickname) != nicknameMap.end())
 	{
 		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 433 " + client.getIPadd() + " " + nickname + " :Nickname is already in use\r\n" + std::string(EN); // ERR_NICKNAMEINUSE
-		send(fd, errorMsg.c_str(), errorMsg.length(), 0);
+		send(client.getFd(), errorMsg.c_str(), errorMsg.length(), 0);
 		return;
 	}
 	std::string oldNickname = client.getNickname();
 	if (!oldNickname.empty())
 		nicknameMap.erase(oldNickname); // Remove old nickname from the map
 	client.setNickname(nickname);
-	nicknameMap[nickname] = fd;																								   // Add the new nickname to the map
-	std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() + "\r\n" + std::string(WHI); // Inform the client of the nickname change
-	send(fd, response.c_str(), response.length(), 0);
-	std::cout << "Client <" << fd << "> changed nickname to: " << nickname << std::endl;
-	if (!client.ifAuthenticated())
-		sendWelcome(fd, client);
-}
-
-void Server::processSasl(int fd, const std::string &message)
-{
-	std::vector<Client>::iterator it = getClient(fd);
-	if (it == clients.end())
-		throw std::runtime_error("No client was found\n");
-	Client &client = (*this)[it];
-	if (!client.ifAuthenticated())
-		return;
-	std::map<std::string, bool> &aMap = client.getFaceOutheDirt();
-	if (message.find("AUTHENTICATE PLAIN") != std::string::npos)
-	{
-		// Step 1: Tell client to send credentials
-		std::string response = "AUTHENTICATE +\r\n";
-		send(fd, response.c_str(), response.size(), 0);
-		return;
-	}
-	else if (message.find("AUTHENTICATE ") == 0)
-	{
-		// Step 2: Extract Base64-encoded credentials
-		std::string encoded_credentials = message.substr(13); // Skip "AUTHENTICATE "
-
-		// Step 3: Decode Base64
-		std::string decoded = base64_decode(encoded_credentials);
-
-		// Step 4: Split decoded string into username and password
-		std::istringstream ss(decoded);
-		std::string username, auth_username, password;
-		std::getline(ss, username, '\0');
-		std::getline(ss, auth_username, '\0');
-		std::getline(ss, password, '\0');
-
-		// Step 5: Validate credentials (Assume username = "user", password = "pass")
-		if (!username.empty() && password.compare(this->password))
-		{
-			client.setNickname(username);
-			client.setUserName(username, username);
-			std::map<std::string, bool>::iterator bt = aMap.find("pass");
-			bt->second = true;
-			std::string msg = std::string(GRE) + ":" + this->hostname + " 900 " + client.getIPadd() + " " + client.getNickname() + "!" + client.getUserName() + "@" + this->hostname + client.getUserName() + "_account" + " :You are now logged in as " + client.getUserName() + "\r\n" + std::string(EN);
-			send(fd, msg.c_str(), msg.size(), 0);
-			if (!client.ifAuthenticated())
-				sendWelcome(fd, client);
-		}
-		else
-		{
-			std::string msg = std::string(RED) + ":" + this->hostname + " 904 " + client.getIPadd() + " :SASL authentication successful\r\n" + std::string(EN);
-			send(fd, msg.c_str(), msg.size(), 0);
-		}
-	}
-}
-
-void Server::capEnd(int fd)
-{
-	std::string capEnd = "CAP END\r\n";
-	send(fd, capEnd.c_str(), capEnd.size(), 0);
-	return;
+	nicknameMap[nickname] = client.getFd();																								   // Add the new nickname to the map
+	std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() + "\r\n" + std::string(EN); // Inform the client of the nickname change
+	send(client.getFd(), response.c_str(), response.length(), 0);
+	std::cout << "Client <" << client.getFd() << "> changed nickname to: " << nickname << std::endl;
 }
 
 std::vector<Client>::iterator Server::getClient(int fd)
@@ -966,65 +843,4 @@ int stringToInt(const std::string &str)
 	int number;
 	ss >> number; // Convert string to integer
 	return number;
-}
-
-const char Server::BASE64_CHARS[] =
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	"abcdefghijklmnopqrstuvwxyz"
-	"0123456789+/";
-
-// Helper function to check if a character is Base64
-bool Server::is_base64(unsigned char c)
-{
-	return (isalnum(c) || (c == '+') || (c == '/'));
-}
-
-// Base64 decoding function
-std::string Server::base64_decode(const std::string &encoded_string)
-{
-	int in_len = encoded_string.size();
-	int i = 0, j = 0, in_ = 0;
-	unsigned char char_array_4[4], char_array_3[3];
-	std::string decoded;
-
-	while (in_len-- && (encoded_string[in_] != '=') && is_base64(encoded_string[in_]))
-	{
-		char_array_4[i++] = encoded_string[in_];
-		in_++;
-
-		if (i == 4)
-		{
-			for (i = 0; i < 4; i++)
-				char_array_4[i] = static_cast<unsigned char>(
-					std::strchr(BASE64_CHARS, char_array_4[i]) - BASE64_CHARS);
-
-			char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-			char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-			char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-			for (i = 0; (i < 3); i++)
-				decoded += char_array_3[i];
-
-			i = 0;
-		}
-	}
-
-	if (i)
-	{
-		for (j = i; j < 4; j++)
-			char_array_4[j] = 0;
-
-		for (j = 0; j < 4; j++)
-			char_array_4[j] = static_cast<unsigned char>(
-				std::strchr(BASE64_CHARS, char_array_4[j]) - BASE64_CHARS);
-
-		char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-		char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-		char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-		for (j = 0; (j < i - 1); j++)
-			decoded += char_array_3[j];
-	}
-
-	return decoded;
 }
