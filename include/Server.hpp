@@ -85,11 +85,16 @@ class Server //-> class for server
         void inviteCommand(int fd, std::string const &message);
         static bool is_base64(unsigned char c);
         std::string base64_decode(const std::string &encoded_string);
+<<<<<<< HEAD
         int  authenticate(Client& client, const std::string &line, bool needsCap);
         void authenticate(Client& client, const std::string& line);
         void sendPingToClients();
         int checkCap(const std::string& line);
         std::vector<std::string> storeInputLines(Client &client, const std::string &message);
+=======
+        void clientWelcomeMSG(int fd, Client &client);
+
+>>>>>>> 76a1177760b3690678b7d8e87ff5ddc02fb1b1f2
 };
 
 bool isNumber(const std::string &str);
