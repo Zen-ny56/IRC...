@@ -13,7 +13,6 @@ void Server::clearClients(int fd)
             break;
         }
     }
-
     // Remove from clients vector and all channels
     for (size_t i = 0; i < clients.size(); i++)
     { 
@@ -174,10 +173,6 @@ std::vector<std::string> Server::storeInputLines(Client& client, const std::stri
 		std::cout << line << std::endl;
         lines.push_back(line);
 	}
-	// if (lines.size() >= 3 && /*lines[0].find("CAP LS") == 0 && */lines[1].find("PASS ") == 0 && lines[2].find("NICK ") == 0 && lines[3].find("USER ") == 0)
-    // {
-		//     client.setNeedsCap(true);
-		// }
 	if (lines[0].find("CAP LS") == 0)
 	{
 		client.setNeedsCap(true);
@@ -504,8 +499,25 @@ void Server::sendWelcome(int fd, Client &client)
 
 	// 5. RPL_ISUPPORT (005)
 	std::string isupportMsg = std::string(YEL) + ":" + this->hostname + " 005 " + client.getNickname() + " irrsi (" + this->hostname + ") :are supported by this server\r\n";
-	isupportMsg += "CHANTYPES=# PREFIX=(+o+k+t+l+i-o-k-t-l-i) CHANLIMIT=#:100 MODES=5 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
+	isupportMsg += "CHANTYPES=# PREFIX=(o)@ CHANLIMIT=#:100 MODES=5 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
 	send(fd, isupportMsg.c_str(), isupportMsg.size(), 0);
+
+	std::string rpl_userClient = std::string(YEL) + ":" + this->hostname + " 251 " + client.getNickname() + " :There are 10 users and 3 services on 1 server\r\n" + std::string(EN);
+	send(fd, rpl_userClient.c_str(), rpl_userClient.size(), 0);
+	std::string rpl_useroper = std::string(YEL) + ":" + this->hostname + " 252 " + client.getNickname() + " 2 :operator(s) online\r\n" + std::string(EN);
+	send(fd, rpl_useroper.c_str(), rpl_useroper.size(), 0);
+	std::string rpl_userunkown = std::string(YEL) + ":" + this->hostname + " 253 " + client.getNickname() + " 1 :unknown connection(s)\r\n" + std::string(EN); // 253 RPL_LUSERUNKNOWN
+	send(fd, rpl_userunkown.c_str(), rpl_userunkown.size(), 0);
+	std::string wa = std::string(YEL) + ":" + this->hostname + " 254 " + client.getNickname() + " 5 :channels formed\r\n" + std::string(EN);
+	send(fd, wa.c_str(), wa.size(), 0);
+	std::string waa = std::string(YEL) + ":" + this->hostname + " 255 " + client.getNickname() + " :I have 1 clients and 1 servers\r\n" + std::string(EN);
+	send(fd, waa.c_str(), waa.size(), 0);
+	std::string waaa = std::string(YEL) + ":" + this->hostname + " 375 " + client.getNickname() + " :- " + client.getUserName() + " : Message of the Day -\r\n" + std::string(EN);
+	send(fd, waaa.c_str(), waaa.size(), 0);
+	std::string waaaa = std::string(YEL) + ":" + this->hostname + " 372 " + client.getNickname() + " :- Enjoy your stay -\r\n" + std::string(EN);
+	send(fd, waaaa.c_str(), waaaa.size(), 0);
+	std::string waaaaa = std::string(YEL) + ":" + this->hostname + " 375 " + client.getNickname() + " :- -\r\n" + std::string(EN);
+	send(fd, waaaaa.c_str(), waaaaa.size(), 0);
 
 	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;34m===============================================\033[0m" << std::endl;
 	// std::cout << ":" << this->hostname << " 372 " + client.getNickname() << " : \033[1;32m          IRC Command List and Format        \033[0m" << std::endl;
