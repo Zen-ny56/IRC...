@@ -63,60 +63,52 @@ void Server::clearClients(int fd)
 			}
 		}
 	}
-}
-
-int Server::clearClients(int fd, bool isServer)
-{
-	(void)fd;
-	(void)isServer;
-	std::vector<std::string> channelstodelete;
-	std::cout << "Aaaaa" << std::endl;
-	// // Remove from clients vector and all channels
-	for (size_t i = 0; i < clients.size(); i++)
+	else if (fd == 3)
 	{
-		// Remove client from all channels
-		std::string nickname = clients[i].getNickname();
-		std::string b;
-		for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
+		for (size_t i = 0; i < clients.size(); i++)
 		{
-			Channel &channel = it->second;
-			if (channel.isInChannel(clients[i].getFd()))
+			std::string nickname = clients[i].getNickname();
+			std::string b;
+			for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
 			{
-			// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
-				if (channel.isInviteOnly() && channel.isInvitedUser(clients[i].getFd()))
-					channel.removeClientFromInvitation(clients[i].getFd());
-				if (!channel.isInvited(clients[i].getFd()))
-					channel.remove_isInvited(clients[i].getFd());
-				// Broadcast quit message to channel members
-				std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
-				channel.broadcastToChannel(quitMsg);
-				channel.removeClient(clients[i].getFd());
-				// Remove channel if empty
-				if (channel.listUsers().empty())
+				Channel &channel = it->second;
+				if (channel.isInChannel(clients[i].getFd()))
 				{
-					b = it->first;
-					channelstodelete.push_back(b);
+				// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
+					if (channel.isInviteOnly() && channel.isInvitedUser(clients[i].getFd()))
+						channel.removeClientFromInvitation(clients[i].getFd());
+					if (!channel.isInvited(clients[i].getFd()))
+						channel.remove_isInvited(clients[i].getFd());
+					// Broadcast quit message to channel members
+					std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
+					channel.broadcastToChannel(quitMsg);
+					channel.removeClient(clients[i].getFd());
+					// Remove channel if empty
+					if (channel.listUsers().empty())
+					{
+						b = it->first;
+						channelstodelete.push_back(b);
+					}
 				}
 			}
-		}
-		//Deleting channel that's empty
-		for (std::vector<std::string>::iterator ct = channelstodelete.begin(); ct != channelstodelete.end(); ++ct)
-		{
-			std::map<std::string, Channel>::iterator bt = channels.find(*ct);
-			if (bt != channels.end())
+			//Deleting channel that's empty
+			for (std::vector<std::string>::iterator ct = channelstodelete.begin(); ct != channelstodelete.end(); ++ct)
 			{
-				if (this->modes != NULL)
-					delete this->modes;
-				channels.erase(bt->first);
+				std::map<std::string, Channel>::iterator bt = channels.find(*ct);
+				if (bt != channels.end())
+				{
+					if (this->modes != NULL)
+						delete this->modes;
+					channels.erase(bt->first);
+				}
 			}
+			nicknameMap.erase(nickname);
+			clients.erase(clients.begin() + i);
 		}
-		nicknameMap.erase(nickname);
-		clients.erase(clients.begin() + i);
-		break;
+		// std::cout << "We reach here" << std::endl;
 	}
-	// closeFds();
-	return (0);
 }
+
 
 bool Server::signal = false; //-> initialize the static boolean
 
@@ -270,10 +262,7 @@ void Server::receiveNewData(int fd)
 	if (bytes <= 0)
 	{ //-> check if the client disconnected
 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
-		if (fd == 3)
-			clearClients(fd, true);
-		else
-			clearClients(fd); //-> clear the client
+		clearClients(fd); //-> clear the client
 		close(fd);		  //-> close the client socket
 	}
 	else 

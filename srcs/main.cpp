@@ -69,6 +69,7 @@ int main(int ac, char **av)
 	}
     catch (const std::exception &e)
     {
+        ser.clearClients(3);
         ser.closeFds(); // Close open file descriptors
         std::cerr << e.what() << std::endl;
 	}
