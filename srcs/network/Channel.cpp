@@ -141,6 +141,8 @@ void Channel::setTopic(const std::string& topic){this->topic = topic;}
 std::vector<int> Channel::listUsers()
 {
 	std::vector<int> temp;
+	if (clientFds.begin() == clientFds.end())
+		return(temp);
 	for (std::vector<int>::iterator it = clientFds.begin(); it != clientFds.end(); ++it)
 	{
 		temp.push_back(*it);
@@ -206,5 +208,21 @@ void Channel::removeClient(int fd)
 			clientFds.erase(it); 
 			break;
 		}
+	}
+}
+
+void Channel::remove_isInvited(int fd)
+{
+	std::map<int, bool>::iterator it = _isInvited.find(fd);
+	if (it == _isInvited.end())
+		return;
+	_isInvited.erase(it->first);
+}
+
+void Channel::removeModes()
+{
+	for (std::map<std::string, bool>::iterator it = modes.begin(); it != modes.end(); ++it)
+	{
+		modes.erase(it->first);
 	}
 }

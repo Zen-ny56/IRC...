@@ -4,17 +4,8 @@ Server::Server() { serSocketFd = -1; }
 
 void Server::clearClients(int fd)
 {
-	// Remove from pollfd vector
-	for (size_t i = 0; i < fds.size(); i++)
-	{
-		if (fds[i].fd == fd)
-		{
-			fds.erase(fds.begin() + i);
-			break;
-		}
-	}
-
-	// Remove from clients vector and all channels
+	(void)fd;
+	// // Remove from clients vector and all channels
 	for (size_t i = 0; i < clients.size(); i++)
 	{
 		if (clients[i].getFd() == fd)
@@ -26,18 +17,36 @@ void Server::clearClients(int fd)
 				Channel &channel = it->second;
 				if (channel.isInChannel(fd))
 				{
-					channel.removeClient(fd);
+					// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
+					if (channel.isInviteOnly() && channel.isInvitedUser(fd))
+					channel.removeClientFromInvitation(fd);
+					if (!channel.isInvited(fd))
+					channel.remove_isInvited(fd);
 					// Broadcast quit message to channel members
 					std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
 					channel.broadcastToChannel(quitMsg);
+					channel.removeClient(fd);
 					// Remove channel if empty
 					if (channel.listUsers().empty())
+					{
+						channel.removeModes();
+						// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
 						channels.erase(it->first);
+					}
 				}
 			}
 			// Remove nickname from map
 			nicknameMap.erase(nickname);
 			clients.erase(clients.begin() + i);
+			break;
+		}
+	}
+	for (size_t i = 0; i < fds.size(); i++)
+	{
+		if (fds[i].fd == fd)
+		{
+			close(fds[i].fd);
+			fds.erase(fds.begin() + i);
 			break;
 		}
 	}
@@ -486,7 +495,7 @@ void Server::clientWelcomeMSG(int fd, Client &client)
 		return ;
 	std::ostringstream oss;
 	oss << this->hostname;
-	std::string buff =  ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;34m===============================================\033[0m" + "\n"
+	std::string buff =  ":" + oss.str() + " 375 " + client.getNickname() + " : \033[1;34m===============================================\033[0m" + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;32m          IRC Command List and Format        \033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;34m===============================================\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : CAP LS  | \033[1;37m /CAP LS\033[0m"  + "\n"
@@ -538,6 +547,16 @@ void Server::sendWelcome(int fd, Client &client)
 	std::string isupportMsg = std::string(YEL) + ":" + this->hostname + " 005 " + client.getNickname() + " irrsi (" + this->hostname + ") :are supported by this server\r\n";
 	isupportMsg += "CHANTYPES=# PREFIX=(o)@ CHANLIMIT=#:100 MODES=5 NETWORK=irssi CASEMAPPING=rfc1459\r\n" + std::string(EN);
 	send(fd, isupportMsg.c_str(), isupportMsg.size(), 0);
+	std::string rpl_userClient = std::string(YEL) + ":" + this->hostname + " 251 " + client.getNickname() + " :There are 10 users and 3 services on 1 server\r\n" + std::string(EN);
+	send(fd, rpl_userClient.c_str(), rpl_userClient.size(), 0);
+	std::string rpl_useroper = std::string(YEL) + ":" + this->hostname + " 252 " + client.getNickname() + " 2 :operator(s) online\r\n" + std::string(EN);
+	send(fd, rpl_useroper.c_str(), rpl_useroper.size(), 0);
+	std::string rpl_userunkown = std::string(YEL) + ":" + this->hostname + " 253 " + client.getNickname() + " 1 :unknown connection(s)\r\n" + std::string(EN); // 253 RPL_LUSERUNKNOWN
+	send(fd, rpl_userunkown.c_str(), rpl_userunkown.size(), 0);
+	std::string wa = std::string(YEL) + ":" + this->hostname + " 254 " + client.getNickname() + " 5 :channels formed\r\n" + std::string(EN);
+	send(fd, wa.c_str(), wa.size(), 0);
+	std::string waa = std::string(YEL) + ":" + this->hostname + " 255 " + client.getNickname() + " :I have 1 clients and 1 servers\r\n" + std::string(EN);
+	send(fd, waa.c_str(), waa.size(), 0);
 	clientWelcomeMSG(client.getFd(), client);
 }
 
@@ -649,8 +668,6 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 	if (iter == clients.end())
 		throw std::runtime_error("Error finding client\n");
 	Client &client = (*this)[iter];
-	// if (client.getUserAuthen() == false)
-	// 	return ;
 	std::map<std::string, Channel>::iterator it = channels.find(channelName);
 	if (it == channels.end())
 	{
