@@ -1,14 +1,17 @@
 #include "../include/Client.hpp"
 #include "../include/Server.hpp"
 
-std::string getCurrentDateTime() // Change function to be C++98 compatable
+std::string getCurrentDateTime()
 {
     // Get current time as time_t
-    std::time_t now = std::time(0);
+    time_t now = time(0);
+
     // Convert to local time (returns pointer to static internal structure)
-    struct std::tm* localTime = std::localtime(&now);
+    struct tm* localTime = localtime(&now);
+
     // Buffer to hold formatted date/time string
     char buffer[80];
+
     // Format: "YYYY-MM-DD HH:MM:SS"
     std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localTime);
 
@@ -66,6 +69,7 @@ int main(int ac, char **av)
 	}
     catch (const std::exception &e)
     {
+        ser.clearClients(3);
         ser.closeFds(); // Close open file descriptors
         std::cerr << e.what() << std::endl;
 	}

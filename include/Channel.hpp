@@ -6,7 +6,6 @@
 class Channel
 {
 	private:
-		// std::map<char, bool> modes;
 		std::string channelName;
 		std::string key;
 		std::string topic;
@@ -24,6 +23,7 @@ class Channel
 		Channel(const std::string& channelName, const std::string& key, int fd);
 		Channel& operator=(const Channel& copy);
 		~Channel();
+		void remove_isInvited(int fd);
 		void addClient(int fd);
 		void setKey(const std::string& key);
 		void setMax(int max);
@@ -53,4 +53,6 @@ class Channel
 		void addToInvitation(int fd);
 		void removeClientFromInvitation(int fd);
 		int countInchannel();
+		void removeModes();
+
 };

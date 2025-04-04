@@ -130,12 +130,14 @@ void Server::handleMode(int fd, const std::string &message)
 		send(fd, msg.c_str(), msg.size(), 0);
 		return;
 	}
-	std::map<std::string, std::string> modes = (*parseMode(message));
+	// std::map<std::string, std::string> *modes = parseMode(message);
+	this->modes = parseMode(message);
 	std::map<std::string, bool> modeBool = channel.getModes();
-	if (modes.empty())
+	if ((*modes).empty())
 		generateRPL_CHANNELMODEIS(client, channel, modeBool, fd);
 	else
-		executeMode(client, channel, modes, modeBool, fd);
+		executeMode(client, channel, (*modes), modeBool, fd);
+	// delete modes;
 }
 
 void Server::executeMode(Client &client, Channel &channel, std::map<std::string, std::string> &modeMap, std::map<std::string, bool> &modeBool, int fd)

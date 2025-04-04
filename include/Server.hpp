@@ -42,10 +42,13 @@ class Server //-> class for server
         std::string startTime;
         std::vector<Client> clients; //-> vector of Clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
+        // std::map<int, time_t> clientLastPing;
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
+	std::map<std::string, std::string> *modes;
     public:
         Server(); //-> default constructor
+
         void serverInit(int port, std::string pass); //-> server initialization
         void serSocket(); //-> server socket creation
         void acceptNewClient(); //-> accept new client
@@ -56,11 +59,10 @@ class Server //-> class for server
         void sendCapabilities(int fd);
         void processCapReq(int fd, const std::string& message);
         void markPasswordAccepted(int fd);
-        void validatePassword(int fd, const std::string& message);
-        void processNickUser(int fd, const std::string& message);
-        void processSasl(int fd, const std::string& message);
+        void validatePassword(Client& client, const std::string& message);
+        void processNickUser(Client& client, const std::string& nickname);
         bool isValidNickname(const std::string& nickname);
-        void processUser(int fd, const std::string& message);
+        void processUser(Client& client, std::string& username, std::string& ident, std::string& host, std::string& realname);
         void capEnd(int fd);
         std::vector<Client>::iterator getClient(int fd);
         void handleChannel(int fd, const std::string& message);
@@ -85,7 +87,13 @@ class Server //-> class for server
         void inviteCommand(int fd, std::string const &message);
         static bool is_base64(unsigned char c);
         std::string base64_decode(const std::string &encoded_string);
+        int  authenticate(Client& client, const std::string &line, bool needsCap);
+        void authenticate(Client& client, const std::string& line);
+        void sendPingToClients();
+        int checkCap(const std::string& line);
+        std::vector<std::string> storeInputLines(Client &client, const std::string &message);
         void clientWelcomeMSG(int fd, Client &client);
+        int clearClients(int fd, bool isServer);
 
 };
 
