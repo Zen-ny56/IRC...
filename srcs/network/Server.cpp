@@ -4,63 +4,118 @@ Server::Server() { serSocketFd = -1; }
 
 void Server::clearClients(int fd)
 {
-	(void)fd;
 	std::vector<std::string> channelstodelete;
+	// // Remove from clients vector and all channels
+	if (fd > 3)
+	{
+		for (size_t i = 0; i < clients.size(); i++)
+		{
+			if (clients[i].getFd() == fd)
+			{
+				// Remove client from all channels
+				std::string nickname = clients[i].getNickname();
+				std::string b;
+				for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
+				{
+					Channel &channel = it->second;
+					if (channel.isInChannel(fd))
+					{
+					// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
+						if (channel.isInviteOnly() && channel.isInvitedUser(fd))
+							channel.removeClientFromInvitation(fd);
+						if (!channel.isInvited(fd))
+							channel.remove_isInvited(fd);
+						// Broadcast quit message to channel members
+						std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
+						channel.broadcastToChannel(quitMsg);
+						channel.removeClient(fd);
+						// Remove channel if empty
+						if (channel.listUsers().empty())
+						{
+							b = it->first;
+							channelstodelete.push_back(b);
+						}
+					}
+				}
+				//Deleting channel that's empty
+				for (std::vector<std::string>::iterator ct = channelstodelete.begin(); ct != channelstodelete.end(); ++ct)
+				{
+					std::map<std::string, Channel>::iterator bt = channels.find(*ct);
+					if (bt != channels.end())
+					{
+						if (this->modes != NULL)
+							delete this->modes;
+						channels.erase(bt->first);
+					}
+				}
+				nicknameMap.erase(nickname);
+				clients.erase(clients.begin() + i);
+				break;
+			}
+		}
+		for (size_t i = 0; i < fds.size(); i++)
+		{
+			if (fds[i].fd == fd)
+			{
+				close(fds[i].fd);
+				fds.erase(fds.begin() + i);
+				break;
+			}
+		}
+	}
+}
+
+int Server::clearClients(int fd, bool isServer)
+{
+	(void)fd;
+	(void)isServer;
+	std::vector<std::string> channelstodelete;
+	std::cout << "Aaaaa" << std::endl;
 	// // Remove from clients vector and all channels
 	for (size_t i = 0; i < clients.size(); i++)
 	{
-		if (clients[i].getFd() == fd)
+		// Remove client from all channels
+		std::string nickname = clients[i].getNickname();
+		std::string b;
+		for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
 		{
-			// Remove client from all channels
-			std::string nickname = clients[i].getNickname();
-			std::string b;
-			for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
+			Channel &channel = it->second;
+			if (channel.isInChannel(clients[i].getFd()))
 			{
-				Channel &channel = it->second;
-				if (channel.isInChannel(fd))
+			// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
+				if (channel.isInviteOnly() && channel.isInvitedUser(clients[i].getFd()))
+					channel.removeClientFromInvitation(clients[i].getFd());
+				if (!channel.isInvited(clients[i].getFd()))
+					channel.remove_isInvited(clients[i].getFd());
+				// Broadcast quit message to channel members
+				std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
+				channel.broadcastToChannel(quitMsg);
+				channel.removeClient(clients[i].getFd());
+				// Remove channel if empty
+				if (channel.listUsers().empty())
 				{
-					// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
-					if (channel.isInviteOnly() && channel.isInvitedUser(fd))
-						channel.removeClientFromInvitation(fd);
-					if (!channel.isInvited(fd))
-						channel.remove_isInvited(fd);
-					// Broadcast quit message to channel members
-					std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
-					channel.broadcastToChannel(quitMsg);
-					channel.removeClient(fd);
-					// Remove channel if empty
-					if (channel.listUsers().empty())
-					{
-						b = it->first;
-						channelstodelete.push_back(b);
-					}
+					b = it->first;
+					channelstodelete.push_back(b);
 				}
 			}
-			//Deleting channel that's empty
-			for (std::vector<std::string>::iterator ct = channelstodelete.begin(); ct != channelstodelete.end(); ++ct)
-			{
-
-				std::map<std::string, Channel>::iterator bt = channels.find(*ct);
-				if (bt != channels.end())
-					channels.erase(bt->first);
-			}
-			// std::cout << b << std::endl;
-			// erase()
-			// Remove nickname from map
-			nicknameMap.erase(nickname);
-			clients.erase(clients.begin() + i);
-			break;
 		}
-	}
-	for (size_t i = 0; i < fds.size(); i++)
-	{
-		if (fds[i].fd == fd)
+		//Deleting channel that's empty
+		for (std::vector<std::string>::iterator ct = channelstodelete.begin(); ct != channelstodelete.end(); ++ct)
 		{
-			close(fds[i].fd);
-			fds.erase(fds.begin() + i);
-			break;
+			std::map<std::string, Channel>::iterator bt = channels.find(*ct);
+			if (bt != channels.end())
+			{
+				if (this->modes != NULL)
+					delete this->modes;
+				channels.erase(bt->first);
+			}
 		}
+		nicknameMap.erase(nickname);
+		clients.erase(clients.begin() + i);
+		break;
 	}
+	// closeFds();
+	return (0);
 }
 
 bool Server::signal = false; //-> initialize the static boolean
@@ -215,7 +270,10 @@ void Server::receiveNewData(int fd)
 	if (bytes <= 0)
 	{ //-> check if the client disconnected
 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
-		clearClients(fd); //-> clear the client
+		if (fd == 3)
+			clearClients(fd, true);
+		else
+			clearClients(fd); //-> clear the client
 		close(fd);		  //-> close the client socket
 	}
 	else 
@@ -318,15 +376,14 @@ void Server::processQuit(int fd, const std::string &reason)
 	// std::string errorMessage = "ERROR :Closing link (" + nickname + ") [Quit: " + reason + "]";
 	// send(fd, quitMessage.c_str(), quitMessage.size(), 0);
 	// Remove the client from the server
-	disconnectClient(fd); // Assume this function handles removing the client from all data structures and closing the connection
 }
 
-void Server::disconnectClient(int fd)
-{
-	clearClients(fd);
-	close(fd);
-	std::cout << RED << "Client <" << fd << "> Disconnected" << std::endl;
-}
+// void Server::disconnectClient(int fd)
+// {
+// 	clearClients(fd);
+// 	close(fd);
+// 	std::cout << RED << "Client <" << fd << "> Disconnected" << std::endl;
+// }
 
 void Server::acceptNewClient()
 {
@@ -338,7 +395,7 @@ void Server::acceptNewClient()
 	int incofd = accept(serSocketFd, (sockaddr *)&(cliadd), &len); //-> accept the new client
 	if (incofd == -1)
 	{
-		std::cout << "accept() failed" << std::endl;
+		// std::cout << "accept() failed" << std::endl;
 		return;
 	}
 	if (fcntl(incofd, F_SETFL, O_NONBLOCK) == -1) //-> set the socket option (O_NONBLOCK) for non-blocking socket
@@ -395,11 +452,11 @@ void Server::serverInit(int port, std::string pass)
 
 	if (!gethostname(this->hostname, sizeof(this->hostname)))
 		this->startTime = getCurrentDateTime();
+	this->modes = NULL;
 	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
 	std::cout << "Listening on " << this->hostname << " on " << this->port << " \r\n";
 	while (Server::signal == false)
 	{ //-> run the server until the signal is received 
-
 		if ((poll(&fds[0], fds.size(), -1) == -1) && Server::signal == false) //-> wait for an event
 			throw(std::runtime_error("poll() failed"));
 

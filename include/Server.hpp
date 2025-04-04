@@ -45,8 +45,10 @@ class Server //-> class for server
         // std::map<int, time_t> clientLastPing;
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
+	std::map<std::string, std::string> *modes;
     public:
         Server(); //-> default constructor
+
         void serverInit(int port, std::string pass); //-> server initialization
         void serSocket(); //-> server socket creation
         void acceptNewClient(); //-> accept new client
@@ -91,6 +93,7 @@ class Server //-> class for server
         int checkCap(const std::string& line);
         std::vector<std::string> storeInputLines(Client &client, const std::string &message);
         void clientWelcomeMSG(int fd, Client &client);
+        int clearClients(int fd, bool isServer);
 
 };
 
