@@ -5,6 +5,7 @@ Server::Server() { serSocketFd = -1; }
 void Server::clearClients(int fd)
 {
 	(void)fd;
+	std::vector<std::string> channelstodelete;
 	// // Remove from clients vector and all channels
 	for (size_t i = 0; i < clients.size(); i++)
 	{
@@ -12,6 +13,7 @@ void Server::clearClients(int fd)
 		{
 			// Remove client from all channels
 			std::string nickname = clients[i].getNickname();
+			std::string b;
 			for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
 			{
 				Channel &channel = it->second;
@@ -19,9 +21,9 @@ void Server::clearClients(int fd)
 				{
 					// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
 					if (channel.isInviteOnly() && channel.isInvitedUser(fd))
-					channel.removeClientFromInvitation(fd);
+						channel.removeClientFromInvitation(fd);
 					if (!channel.isInvited(fd))
-					channel.remove_isInvited(fd);
+						channel.remove_isInvited(fd);
 					// Broadcast quit message to channel members
 					std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
 					channel.broadcastToChannel(quitMsg);
@@ -29,12 +31,21 @@ void Server::clearClients(int fd)
 					// Remove channel if empty
 					if (channel.listUsers().empty())
 					{
-						channel.removeModes();
-						// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
-						channels.erase(it->first);
+						b = it->first;
+						channelstodelete.push_back(b);
 					}
 				}
 			}
+			//Deleting channel that's empty
+			for (std::vector<std::string>::iterator ct = channelstodelete.begin(); ct != channelstodelete.end(); ++ct)
+			{
+
+				std::map<std::string, Channel>::iterator bt = channels.find(*ct);
+				if (bt != channels.end())
+					channels.erase(bt->first);
+			}
+			// std::cout << b << std::endl;
+			// erase()
 			// Remove nickname from map
 			nicknameMap.erase(nickname);
 			clients.erase(clients.begin() + i);
