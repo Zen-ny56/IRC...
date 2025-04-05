@@ -781,7 +781,7 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 		if (bt == clients.end())
 			throw std::runtime_error("Error finding clients\n");
 		Client &user = (*this)[bt];
-		std::string msg = std::string(YEL) + ":" + this->hostname + " 353 " + client.getNickname() + " = " + channelName + " :" + (channel.isOperator(user.getFd()) ? "@" : "") + user.getNickname() + std::string(EN) + "\r\n";
+		std::string msg = ":" + client.getNickname() + " = " + channelName + " :" + (channel.isOperator(user.getFd()) ? "@" : "") + user.getNickname() + std::string(EN) + "\r\n";
 		send(fd, msg.c_str(), msg.size(), 0);
 	}
 	std::string msg = std::string(YEL) + ":" + this->hostname + " 366 " + client.getNickname() + " " + channelName + " :End of /NAMES list" + std::string(EN) + "\r\n";
@@ -870,8 +870,7 @@ void Server::processPrivmsg(int fd, const std::string &message)
 		// Send the message to the channel members
 		channel.broadcastToChannel(text);
 	}
-	// std::map<std::string, Channel>::iterator it = channels.find(target);
-	/*}*/ else
+	else
 	{
 		std::vector<Client>::iterator ct = getClientUsingNickname(target);
 		if (ct == clients.end())
