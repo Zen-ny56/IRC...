@@ -254,7 +254,6 @@ void Server::receiveNewData(int fd)
 	memset(buff, 0, sizeof(buff)); //-> clear the buffer
 
 	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1, 0); //-> receive the data
-	// sendPingToClients();
 	std::vector<Client>::iterator it = getClient(fd);
 	if (it == clients.end())
 		throw std::runtime_error("Client was not found]\n");
@@ -384,7 +383,7 @@ void Server::acceptNewClient()
 	int incofd = accept(serSocketFd, (sockaddr *)&(cliadd), &len); //-> accept the new client
 	if (incofd == -1)
 	{
-		// std::cout << "accept() failed" << std::endl;
+		std::cout << "accept() failed" << std::endl;
 		return;
 	}
 	if (fcntl(incofd, F_SETFL, O_NONBLOCK) == -1) //-> set the socket option (O_NONBLOCK) for non-blocking socket
@@ -754,8 +753,9 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 	channel.addClient(fd);
 	std::cout << channel.getKey() << std::endl;
 	// 5. Broadcast JOIN message to all clients in the channel
-	std::string joinMessage = ":" + client.getNickname() + "!~" + client.getUserName() + "@" + this->hostname +  " JOIN :" + channelName + "\r\n" + std::string(EN);
+	std::string joinMessage = std::string(EN) + ":" + client.getNickname() + "!~" + client.getUserName() + "@" + this->hostname +  " JOIN :" + channelName + "\r\n";
 	channel.broadcastToChannel(joinMessage);
+	send(fd, joinMessage.c_str(), joinMessage.size(), 0);
 	// channel.removeClientFromInvitation(fd);
 	// 6. Send the channel topic (or indicate no topic set)
 	if (!channel.getTopic().empty())
@@ -846,6 +846,11 @@ void Server::processPrivmsg(int fd, const std::string &message)
 	}
 	// Extract the actual message text
 	std::string text = message.substr(textStart);
+	if (text[0] != ':')
+	{
+		std::cerr << "Invalid msg param" << std::endl;
+		return;
+	}
 	if (target[0] == '#')
 	{
 		std::map<std::string, Channel>::iterator it = channels.find(target);
@@ -864,7 +869,8 @@ void Server::processPrivmsg(int fd, const std::string &message)
 			return;
 		}
 		// Send the message to the channel members
-		channel.broadcastToChannel(text);
+		std::string response = std::string(EN) + ":" + sender.getNickname() + "!~" + sender.getUserName() + "@" + this->hostname +  " PRIVMSG " + it->first + " " + text +  "\r\n";
+		channel.broadcastToChannel(response);
 	}
 	else
 	{
@@ -877,7 +883,7 @@ void Server::processPrivmsg(int fd, const std::string &message)
 		}
 		Client &recepient = (*this)[ct];
 		// Send the private message to the user
-		std::string response = ":" + sender.getNickname() + " PRIVMSG " + recepient.getNickname() + " :" + text + "\r\n";
+		std::string response = ":" + sender.getNickname() + " PRIVMSG " + recepient.getNickname() + " " + text + "\r\n";
 		send(recepient.getFd(), response.c_str(), response.size(), 0);
 	}
 }

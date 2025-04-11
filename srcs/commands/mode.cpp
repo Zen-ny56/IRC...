@@ -253,7 +253,6 @@ std::string Server::generateRPL_CHANNELMODEIS(Client &client, Channel &channel, 
 	std::string modeString = "+";
 	std::string modeArgs;
 	std::vector<int> operators = channel.getOperFds();
-	std::cout << " RIGHT HERE " << std::endl;
 	// Check which modes are active in the channel
 	if (modeBool.find("i") != modeBool.end() && modeBool.at("i"))
 		modeString += "i";
@@ -283,7 +282,7 @@ std::string Server::generateRPL_CHANNELMODEIS(Client &client, Channel &channel, 
 		modeArgs += " " + ss.str();
 	}
 	// Format response
-	std::string response = std::string(YEL) + ":" + this->hostname + +" 324 " + client.getNickname() + " " + channel.getChannelName() + " " + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(EN);
+	std::string response = std::string(YEL) + ":" + this->hostname + +" 324 " + client.getNickname() + " " + channel.getChannelName() + " :" + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(EN);
 	send(fd, response.c_str(), response.size(), 0);
 	return (response);
 }
