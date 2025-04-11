@@ -392,7 +392,7 @@ void Server::serverInit(int port, std::string pass)
 			if (fds[i].revents & POLLIN)
 			{ //-> check if there is data to read
 				if (fds[i].fd == serSocketFd)
-					acceptNewClient(); //-> accept new client
+					acceptNewClient(); //-> accept ne w client
 				else
 					receiveNewData(fds[i].fd); //-> receive new data from a registered client
 			}
