@@ -45,7 +45,7 @@ class Server //-> class for server
         // std::map<int, time_t> clientLastPing;
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
-	std::map<std::string, std::string> *modes;
+	    std::map<std::string, std::string> *modes;
     public:
         Server(); //-> default constructor
 

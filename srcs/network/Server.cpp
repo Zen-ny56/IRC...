@@ -5,84 +5,28 @@ Server::Server() { serSocketFd = -1; }
 void Server::clearClients(int fd)
 {
 	std::vector<std::string> channelstodelete;
-	// // Remove from clients vector and all channels
-	if (fd > 3)
+	// Remove from clients vector and all channels
+	for (size_t i = 0; i < clients.size(); i++)
 	{
-		for (size_t i = 0; i < clients.size(); i++)
+		if (clients[i].getFd() == fd)
 		{
-			if (clients[i].getFd() == fd)
-			{
-				// Remove client from all channels
-				std::string nickname = clients[i].getNickname();
-				std::string b;
-				for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
-				{
-					Channel &channel = it->second;
-					if (channel.isInChannel(fd))
-					{
-					// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
-						if (channel.isInviteOnly() && channel.isInvitedUser(fd))
-							channel.removeClientFromInvitation(fd);
-						if (!channel.isInvited(fd))
-							channel.remove_isInvited(fd);
-						// Broadcast quit message to channel members
-						std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
-						channel.broadcastToChannel(quitMsg);
-						channel.removeClient(fd);
-						// Remove channel if empty
-						if (channel.listUsers().empty())
-						{
-							b = it->first;
-							channelstodelete.push_back(b);
-						}
-					}
-				}
-				//Deleting channel that's empty
-				for (std::vector<std::string>::iterator ct = channelstodelete.begin(); ct != channelstodelete.end(); ++ct)
-				{
-					std::map<std::string, Channel>::iterator bt = channels.find(*ct);
-					if (bt != channels.end())
-					{
-						if (this->modes != NULL)
-							delete this->modes;
-						channels.erase(bt->first);
-					}
-				}
-				nicknameMap.erase(nickname);
-				clients.erase(clients.begin() + i);
-				break;
-			}
-		}
-		for (size_t i = 0; i < fds.size(); i++)
-		{
-			if (fds[i].fd == fd)
-			{
-				close(fds[i].fd);
-				fds.erase(fds.begin() + i);
-				break;
-			}
-		}
-	}
-	else if (fd == 3)
-	{
-		for (size_t i = 0; i < clients.size(); i++)
-		{
+			// Remove client from all channels
 			std::string nickname = clients[i].getNickname();
 			std::string b;
 			for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
 			{
 				Channel &channel = it->second;
-				if (channel.isInChannel(clients[i].getFd()))
+				if (channel.isInChannel(fd))
 				{
 				// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
-					if (channel.isInviteOnly() && channel.isInvitedUser(clients[i].getFd()))
-						channel.removeClientFromInvitation(clients[i].getFd());
-					if (!channel.isInvited(clients[i].getFd()))
-						channel.remove_isInvited(clients[i].getFd());
+					if (channel.isInviteOnly() && channel.isInvitedUser(fd))
+						channel.removeClientFromInvitation(fd);
+					if (!channel.isInvited(fd))
+						channel.remove_isInvited(fd);
 					// Broadcast quit message to channel members
 					std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
 					channel.broadcastToChannel(quitMsg);
-					channel.removeClient(clients[i].getFd());
+					channel.removeClient(fd);
 					// Remove channel if empty
 					if (channel.listUsers().empty())
 					{
@@ -104,8 +48,8 @@ void Server::clearClients(int fd)
 			}
 			nicknameMap.erase(nickname);
 			clients.erase(clients.begin() + i);
+			break;
 		}
-		// std::cout << "We reach here" << std::endl;
 	}
 }
 
@@ -262,7 +206,17 @@ void Server::receiveNewData(int fd)
 	{ //-> check if the client disconnected
 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
 		clearClients(fd); //-> clear the client
-		close(fd);		  //-> close the client socket
+		close(fd);
+		std::cout << " Do we come here " << std::endl;
+		for (std::vector<struct pollfd>::iterator it = fds.begin(); it != fds.end(); ++it)
+		{
+			if (it->fd == fd)
+			{
+				fds.erase(it);
+				break;
+			}
+		}
+		//-> close the client socket
 	}
 	else 
 	{ //-> print the received data
@@ -306,17 +260,9 @@ void Server::receiveNewData(int fd)
 		{
 			std::string buff = "Invalid Command: try again!\n";
 			send(fd, buff.c_str(), buff.size(), 0);
-			// std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
 		} // handling authentication error to be displayed to the client.
 	}
 }
-
-// void Server::receivePong(int fd)
-// {
-// 	time_t currentTime = time(NULL); // Get current timestamp
-//     std::map<int, time_t>::iterator it = clientLastPing.find(fd);
-// 	it->second = currentTime;
-// }
 
 void Server::reverseRotate(std::stack<std::string> &s)
 {
@@ -365,13 +311,6 @@ void Server::processQuit(int fd, const std::string &reason)
 	// send(fd, quitMessage.c_str(), quitMessage.size(), 0);
 	// Remove the client from the server
 }
-
-// void Server::disconnectClient(int fd)
-// {
-// 	clearClients(fd);
-// 	close(fd);
-// 	std::cout << RED << "Client <" << fd << "> Disconnected" << std::endl;
-// }
 
 void Server::acceptNewClient()
 {
