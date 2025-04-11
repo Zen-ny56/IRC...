@@ -555,19 +555,15 @@ void Server::clientWelcomeMSG(int fd, Client &client)
 	std::string buff =  ":" + oss.str() + " 375 " + client.getNickname() + " : \033[1;34m===============================================\033[0m" + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;32m          IRC Command List and Format        \033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : \033[1;34m===============================================\033[0m"  + "\n"
-	+ ":" + oss.str() + " 372 " + client.getNickname() + " : CAP LS  | \033[1;37m /CAP LS\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : PASS    | \033[1;37m <password>\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : NICK    | \033[1;37m <nickname>\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : USER    | \033[1;37m <username> <hostname> <servername> <realname>\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : INVITE  | \033[1;37m <nickname> <channel>\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : KICK    | \033[1;37m <channel> <nickname> [<reason>]\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : TOPIC   | \033[1;37m <channel> [<topic>]\033[0m"  + "\n"
-	+ ":" + oss.str() + " 372 " + client.getNickname() + " : CAP REQ | \033[1;37m <capability>\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : QUIT    | \033[1;37m [<message>]\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : JOIN    | \033[1;37m <channel> [<key>]\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : PRIVMSG | \033[1;37m <target> <message>\033[0m"  + "\n"
-	+ ":" + oss.str() + " 372 " + client.getNickname() + " : AUTHENTICATE | \033[1;37m <data>\033[0m"  + "\n"
-	+ ":" + oss.str() + " 372 " + client.getNickname() + " : CAP END | \033[1;37m /CAP END\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " : MODE    | \033[1;37m <target> <mode>\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " :\033[1;37m  Available modes:\033[0m"  + "\n"
 	+ ":" + oss.str() + " 372 " + client.getNickname() + " :\033[1;36m    i\033[0m - \033[1;37mSet/remove Invite-only channel\033[0m"  + "\n"
@@ -758,7 +754,7 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 	channel.addClient(fd);
 	std::cout << channel.getKey() << std::endl;
 	// 5. Broadcast JOIN message to all clients in the channel
-	std::string joinMessage = ":" + client.getNickname() + " JOIN :" + channelName + "\r\n" + std::string(EN);
+	std::string joinMessage = ":" + client.getNickname() + "!~" + client.getUserName() + "@" + this->hostname +  " JOIN :" + channelName + "\r\n" + std::string(EN);
 	channel.broadcastToChannel(joinMessage);
 	// channel.removeClientFromInvitation(fd);
 	// 6. Send the channel topic (or indicate no topic set)
@@ -781,7 +777,7 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 		if (bt == clients.end())
 			throw std::runtime_error("Error finding clients\n");
 		Client &user = (*this)[bt];
-		std::string msg = ":" + client.getNickname() + " = " + channelName + " :" + (channel.isOperator(user.getFd()) ? "@" : "") + user.getNickname() + std::string(EN) + "\r\n";
+		std::string msg = std::string(YEL) + ":" + this->hostname + " 353 " + client.getNickname() + " = " + channelName + " :" + (channel.isOperator(user.getFd()) ? "@" : "") + user.getNickname() + std::string(EN) + "\r\n";
 		send(fd, msg.c_str(), msg.size(), 0);
 	}
 	std::string msg = std::string(YEL) + ":" + this->hostname + " 366 " + client.getNickname() + " " + channelName + " :End of /NAMES list" + std::string(EN) + "\r\n";

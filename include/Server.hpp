@@ -94,7 +94,6 @@ class Server //-> class for server
         std::vector<std::string> storeInputLines(Client &client, const std::string &message);
         void clientWelcomeMSG(int fd, Client &client);
         int clearClients(int fd, bool isServer);
-
 };
 
 bool isNumber(const std::string &str);
