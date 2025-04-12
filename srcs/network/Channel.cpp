@@ -8,14 +8,14 @@ Channel::~Channel(){}
 Channel::Channel(const std::string& channelName, const std::string& key, int fd): channelName(channelName), key(key), topic(""), inviteOnly(false), max(INT_MAX), topicRes(false)
 {
 	std::string i = "i"; std::string k = "k"; std::string l = "l"; std::string t = "t"; std::string o = "o";
-	modes[i] = false;
+	modeBools[i] = false;
 	if (!key.empty())
-		modes[k] = true;
+		modeBools[k] = true;
 	else
-		modes[k] = false;
-	modes[l] = false;
-	modes[t] = false;
-	modes[o] = false;
+		modeBools[k] = false;
+	modeBools[l] = false;
+	modeBools[t] = false;
+	modeBools[o] = false;
 	addOperator(fd);
 }
 
@@ -31,11 +31,12 @@ Channel& Channel::operator=(const Channel& other)
 		this->inviteOnly = other.inviteOnly;
 		this->max = other.max;
 		this->topicRes = other.topicRes;
-		this->modes = other.modes;
+		this->modeBools = other.modeBools;
 		this->operFds = other.operFds;
 		this->clientFds = other.clientFds;
 		this->_isInvited = other._isInvited;
 		this->_isBanned = other._isBanned;
+		this->modes = other.modes;
 	}
 	return *this;
 }
@@ -151,7 +152,7 @@ std::vector<int> Channel::listUsers()
 }
 
 //Get Modes
-std::map<std::string, bool> & Channel::getModes(){return this->modes;}
+std::map<std::string, bool> & Channel::getModes(){return this->modeBools;}
 
 //Get this
 std::string Channel::getChannelName(){ 	std::cout << channelName << std::endl;
@@ -219,10 +220,34 @@ void Channel::remove_isInvited(int fd)
 	_isInvited.erase(it->first);
 }
 
-void Channel::removeModes()
+void Channel::removeModeBools()
 {
-	for (std::map<std::string, bool>::iterator it = modes.begin(); it != modes.end(); ++it)
+	for (std::map<std::string, bool>::iterator it = modeBools.begin(); it != modeBools.end(); ++it)
 	{
-		modes.erase(it->first);
+		modeBools.erase(it->first);
 	}
+}
+
+void Channel::reverseRotate(std::stack<std::string> &s)
+{
+	if (s.empty() || s.size() == 1)
+		return; // Nothing to rotate if stack has 0 or 1 element
+	std::queue<std::string> tempQueue;
+	// Step 1: Move all elements except the last one to a queue
+	while (s.size() > 1)
+	{
+		tempQueue.push(s.top());
+		s.pop();
+	}
+	// Step 2: The last remaining element is the bottom-most element
+	std::string bottomElement = s.top();
+	s.pop();
+	// Step 3: Restore the elements back to the stack in original order
+	while (!tempQueue.empty())
+	{
+		s.push(tempQueue.front());
+		tempQueue.pop();
+	}
+	// Step 4: Push the bottom-most element to the top
+	s.push(bottomElement);
 }

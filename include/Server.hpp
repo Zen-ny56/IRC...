@@ -45,11 +45,11 @@ class Server //-> class for server
         // std::map<int, time_t> clientLastPing;
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
-	    std::map<std::string, std::string> *modes;
     public:
         Server(); //-> default constructor
 
         void serverInit(int port, std::string pass); //-> server initialization
+        const char* getHostname() const;
         void serSocket(); //-> server socket creation
         void acceptNewClient(); //-> accept new client
         void receiveNewData(int fd); //-> receive new data from a registered client
@@ -77,9 +77,7 @@ class Server //-> class for server
         std::vector<Client>::iterator getClientUsingNickname(const std::string& nickname); // Added
         std::string trim(const std::string& str);
         void handleMode(int fd, const std::string& message); // Added
-        std::string generateRPL_CHANNELMODEIS(Client& client, Channel& channel, std::map<std::string, bool>& modeBool, int fd); // Added
         void resetModeBool(Channel& channel, std::string mode, bool condition); // Added
-        void executeMode(Client& client, Channel& channel, std::map<std::string, std::string>& modeMap, std::map<std::string, bool>& modeBool, int fd);
         std::map<std::string, std::string>* parseMode(const std::string& message); // delete mode after executed
         void reverseRotate(std::stack<std::string>& s); // Reverse rotate on stack in parsing
         void kickCommand(int fd, const std::string &message);

@@ -41,8 +41,6 @@ void Server::clearClients(int fd)
 				std::map<std::string, Channel>::iterator bt = channels.find(*ct);
 				if (bt != channels.end())
 				{
-					if (this->modes != NULL)
-						delete this->modes;
 					channels.erase(bt->first);
 				}
 			}
@@ -264,29 +262,29 @@ void Server::receiveNewData(int fd)
 	}
 }
 
-void Server::reverseRotate(std::stack<std::string> &s)
-{
-	if (s.empty() || s.size() == 1)
-		return; // Nothing to rotate if stack has 0 or 1 element
-	std::queue<std::string> tempQueue;
-	// Step 1: Move all elements except the last one to a queue
-	while (s.size() > 1)
-	{
-		tempQueue.push(s.top());
-		s.pop();
-	}
-	// Step 2: The last remaining element is the bottom-most element
-	std::string bottomElement = s.top();
-	s.pop();
-	// Step 3: Restore the elements back to the stack in original order
-	while (!tempQueue.empty())
-	{
-		s.push(tempQueue.front());
-		tempQueue.pop();
-	}
-	// Step 4: Push the bottom-most element to the top
-	s.push(bottomElement);
-}
+// void Server::reverseRotate(std::stack<std::string> &s)
+// {
+// 	if (s.empty() || s.size() == 1)
+// 		return; // Nothing to rotate if stack has 0 or 1 element
+// 	std::queue<std::string> tempQueue;
+// 	// Step 1: Move all elements except the last one to a queue
+// 	while (s.size() > 1)
+// 	{
+// 		tempQueue.push(s.top());
+// 		s.pop();
+// 	}
+// 	// Step 2: The last remaining element is the bottom-most element
+// 	std::string bottomElement = s.top();
+// 	s.pop();
+// 	// Step 3: Restore the elements back to the stack in original order
+// 	while (!tempQueue.empty())
+// 	{
+// 		s.push(tempQueue.front());
+// 		tempQueue.pop();
+// 	}
+// 	// Step 4: Push the bottom-most element to the top
+// 	s.push(bottomElement);
+// }
 
 void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
 {
@@ -379,7 +377,6 @@ void Server::serverInit(int port, std::string pass)
 
 	if (!gethostname(this->hostname, sizeof(this->hostname)))
 		this->startTime = getCurrentDateTime();
-	this->modes = NULL;
 	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
 	std::cout << "Listening on " << this->hostname << " on " << this->port << " \r\n";
 	while (Server::signal == false)
@@ -862,4 +859,9 @@ int stringToInt(const std::string &str)
 	int number;
 	ss >> number; // Convert string to integer
 	return number;
+}
+
+const char* Server::getHostname() const
+{
+	return this->hostname;
 }

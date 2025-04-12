@@ -2,7 +2,7 @@
 #include "../../include/Client.hpp"
 #include "../../include/Channel.hpp"
 
-std::map<std::string, std::string> *Server::parseMode(const std::string &message)
+void Channel::parseMode(const std::string &message)
 {
 	std::istringstream iss(message);
 	std::string command, channelName, token;
@@ -20,6 +20,7 @@ std::map<std::string, std::string> *Server::parseMode(const std::string &message
 	std::string type;
 	while (iss >> token)
 	{
+		std::cout << token << std::endl;
 		if (!token.empty() && (token[0] == '+' || token[0] == '-'))
 		{
 			// New mode group detected, process each mode separately
@@ -102,8 +103,7 @@ std::map<std::string, std::string> *Server::parseMode(const std::string &message
 	{
 		std::cout << it->first << " -> " << (it->second.empty() ? "(no param)" : it->second) << std::endl;
 	}
-	std::map<std::string, std::string> *returnedMap = new std::map<std::string, std::string>(modeMap); // Allocate and copy the content of modeMap
-	return (returnedMap);
+	this->modes = modeMap;
 }
 
 void Server::handleMode(int fd, const std::string &message)
@@ -130,19 +130,14 @@ void Server::handleMode(int fd, const std::string &message)
 		send(fd, msg.c_str(), msg.size(), 0);
 		return;
 	}
-	// std::map<std::string, std::string> *modes = parseMode(message);
-	this->modes = parseMode(message);
-	std::map<std::string, bool> modeBool = channel.getModes();
-	if ((*modes).empty())
-		generateRPL_CHANNELMODEIS(client, channel, modeBool, fd);
-	else
-		executeMode(client, channel, (*modes), modeBool, fd);
-	// delete modes;
+	channel.parseMode(message);
+	channel.executeMode(client, *this);
+	channel.generateRPL_CHANNELMODEIS(client, *this);
 }
 
-void Server::executeMode(Client &client, Channel &channel, std::map<std::string, std::string> &modeMap, std::map<std::string, bool> &modeBool, int fd)
+void Channel::executeMode(Client &client, Server& server)
 {
-	for (std::map<std::string, std::string>::iterator ct = modeMap.begin(); ct != modeMap.end(); ++ct)
+	for (std::map<std::string, std::string>::iterator ct = modes.begin(); ct != modes.end(); ++ct)
 	{
 		std::string i = "i";
 		std::string k = "k";
@@ -155,6 +150,8 @@ void Server::executeMode(Client &client, Channel &channel, std::map<std::string,
 		int limit;
 		char modeType = modeStr[1];
 		std::vector<Client>::iterator targetIt;
+		std::map<std::string, bool>::iterator it;
+		std::vector<int>::iterator dt;
 		if (modeStr[0] == '+')
 		{
 			switch (modeType)
@@ -163,47 +160,57 @@ void Server::executeMode(Client &client, Channel &channel, std::map<std::string,
 				// Check if it's valid integer and convert
 				if (isNumber(ct->second) == false)
 				{
-					msg = std::string(RED) + ":ircserv 461 " + client.getNickname() + " " + channel.getChannelName() + " :Not enough parameters" + std::string(WHI);
-					send(fd, msg.c_str(), msg.size(), 0);
+					msg = std::string(RED) + ":ircserv 461 " + client.getNickname() + " " + this->getChannelName() + " :Not enough parameters" + std::string(WHI);
+					send(client.getFd(), msg.c_str(), msg.size(), 0);
 					return;
 				}
 				limit = stringToInt(ct->second);
-				if (limit <= channel.countInchannel())
+				if (limit <= this->countInchannel())
 				{
 					std::ostringstream oss;
 					oss << limit;
-					std::string errorMsg = std::string(RED) + ":" + this->hostname + " 471 " + client.getNickname() + " " + channel.getChannelName() + " :(+l) input size " + oss.str() + " is less or equal to clients in channel\r\n" + std::string(EN);
-					send(fd, errorMsg.c_str(), errorMsg.size(), 0);
+					std::string errorMsg = std::string(RED) + ":" + server.getHostname() + " 471 " + client.getNickname() + " " + getChannelName() + " :(+l) input size " + oss.str() + " is less or equal to clients in channel\r\n" + std::string(EN);
+					send(client.getFd(), errorMsg.c_str(), errorMsg.size(), 0);
 					return;
 				}
-				channel.setMax(limit);
-				modeBool[l] = true;
+				this->setMax(limit);
+				it = modeBools.find(l);
+				it->second = true;
 				break;
 			case 'k':
-				channel.setKey(ct->second);
-				modeBool[k] = true;
+				setKey(ct->second);
+				it = modeBools.find(k);
+				it->second = true;
 				break;
 			case 't':
-				channel.setTopRes(true);
-				modeBool[t] = true;
+				setTopRes(true);
+				it = modeBools.find(t);
+				it->second = true;
 				break;
 			case 'i':
-				channel.setInviteOnly(true);
-				modeBool[i] = true;
+				setInviteOnly(true);
+				it = modeBools.find(i);
+				it->second = true;
 				break;
 			case 'o':
-				targetIt = getClientUsingNickname(ct->second);
-				if (targetIt == clients.end())
+				targetIt = server.getClientUsingNickname(ct->second);
+				for (dt = clientFds.begin(); dt != clientFds.end(); ++dt)
 				{
-					msg = std::string(RED) + ":" + this->hostname + " 401 " + client.getNickname() + " " + ct->second + " :No such nick/channel\r\n" + std::string(EN);
-					send(fd, msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
+					if (*dt == targetIt->getFd())
+						break;
 				}
-				channel.addOperator(targetIt->getFd());
-				modeBool[o] = true;
+				if (dt == clientFds.end())
+				{
+					msg = std::string(RED) + ":" + server.getHostname() + " 401 " + client.getNickname() + " " + ct->second + " :No such nick/channel\r\n" + std::string(EN);
+					send(client.getFd(), msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
+				}
+				addOperator(targetIt->getFd());
+				it = modeBools.find(o);
+				it->second = true;
 				break;
 			default:
-				msg = std::string(RED) + ":" + this->hostname + " 472 " + client.getNickname() + " " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
-				send(fd, msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
+				msg = std::string(RED) + ":" + server.getHostname() + " 472 " + client.getNickname() + " " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
+				send(client.getFd(), msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
 				break;
 			}
 		}
@@ -213,34 +220,43 @@ void Server::executeMode(Client &client, Channel &channel, std::map<std::string,
 			{
 			case 'l':
 				// Check if it's valid integer and convert
-				channel.setMax(INT_MAX);
-				modeBool[l] = false;
+				setMax(INT_MAX);
+				it = modeBools.find(l);
+				it->second = false;
 				break;
 			case 'k':
-				channel.setKey("");
-				modeBool[k] = false;
+				it = modeBools.find(k);
+				it->second = false;
 				break;
 			case 't':
-				channel.setTopRes(false);
-				modeBool[t] = false;
+				setTopRes(false);
+				it = modeBools.find(t);
+				it->second = false;
 				break;
 			case 'i':
-				channel.setInviteOnly(false);
-				modeBool[i] = false;
+				setInviteOnly(false);
+				it = modeBools.find(i);
+				it->second = false;
 				break;
 			case 'o':
-				targetIt = getClientUsingNickname(ct->second);
-				if (targetIt == clients.end())
+				targetIt = server.getClientUsingNickname(ct->second);
+				for (dt = clientFds.begin(); dt != clientFds.end(); ++dt)
 				{
-					msg = std::string(RED) + ":" + this->hostname + " 401 " + client.getNickname() + " " + ct->second + " :No such nick/channel\r\n" + std::string(EN);
-					send(fd, msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
+					if (*dt == targetIt->getFd())
+						break;
 				}
-				channel.removeOperator(targetIt->getFd());
-				modeBool[o] = false;
+				if (dt == clientFds.end())
+				{
+					msg = std::string(RED) + ":" + server.getHostname() + " 401 " + client.getNickname() + " " + ct->second + " :No such nick/channel\r\n" + std::string(EN);
+					send(client.getFd(), msg.c_str(), msg.size(), 0); // ERR_NOSUCHNICK
+				}
+				removeOperator(targetIt->getFd());
+				it = modeBools.find(o);
+				it->second = false;
 				break;
 			default:
-				msg = std::string(RED) + ":" + this->hostname + " 472 " + client.getNickname() + " " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
-				send(fd, msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
+				msg = std::string(RED) + ":" + server.getHostname() + " 472 " + client.getNickname() + " " + ct->first + " :is unknown mode char to me\r\n" + std::string(EN);
+				send(client.getFd(), msg.c_str(), msg.size(), 0); // ERR_ MODE NOT AVAILABLE
 				break;
 			}
 		}
@@ -248,41 +264,48 @@ void Server::executeMode(Client &client, Channel &channel, std::map<std::string,
 	// Switch statements
 }
 
-std::string Server::generateRPL_CHANNELMODEIS(Client &client, Channel &channel, std::map<std::string, bool> &modeBool, int fd)
+std::string Channel::generateRPL_CHANNELMODEIS(Client &client, Server &server)
 {
+	// std::cout << "Why don't we enter here" << std::endl;
 	std::string modeString = "+";
 	std::string modeArgs;
-	std::vector<int> operators = channel.getOperFds();
 	// Check which modes are active in the channel
-	if (modeBool.find("i") != modeBool.end() && modeBool.at("i"))
+	std::map<std::string, bool>::iterator it = modeBools.find("i");
+	if (it->second == true)
 		modeString += "i";
-	if (modeBool.find("t") != modeBool.end() && modeBool.at("t"))
+	it = modeBools.find("t");
+	if (it->second == true)
 		modeString += "t";
-	if (modeBool.find("k") != modeBool.end() && modeBool.at("k") && channel.isOperator(fd))
+	it = modeBools.find("k");
+	if (it->second == true)
 	{
 		modeString += "k";
-		if (channel.isOperator(fd))
-			modeArgs += " " + channel.getKey();
+		if (isOperator(client.getFd()))
+			modeArgs += " " + getKey();
 	}
-	if (modeBool.find("o") != modeBool.end())
+	it = modeBools.find("o");
+	int i = 0;
+	for (std::vector<int>::iterator it = operFds.begin(); it != operFds.end(); ++it)
 	{
-		for (std::vector<int>::iterator it = operators.begin(); it != operators.end(); ++it)
-		{
+		i++;
+		if (i < 2)
 			modeString += "o";
-			break;
-		}
-	}
-	if (modeBool.find("l") != modeBool.end() && modeBool.at("l"))
-	{
-
-		modeString += "l";
-
 		std::stringstream ss;
-		ss << channel.getMax(); // Convert integer to string
+		std::vector<Client>::iterator ourOperator = server.getClient(*it);
+		Client &ourOper = *ourOperator;
+		modeArgs += " " + ourOper.getNickname();
+		// break;
+	}
+	it = modeBools.find("l");
+	if (it->second == true)
+	{
+		modeString += "l";
+		std::stringstream ss;
+		ss << getMax(); // Convert integer to string
 		modeArgs += " " + ss.str();
 	}
 	// Format response
-	std::string response = std::string(YEL) + ":" + this->hostname + +" 324 " + client.getNickname() + " " + channel.getChannelName() + " :" + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(EN);
-	send(fd, response.c_str(), response.size(), 0);
+	std::string response = std::string(YEL) + ":" + server.getHostname() + " 324 " + client.getNickname() + " " + this->channelName + " :" + modeString + (modeArgs.empty() ? "" : " " + modeArgs) + "\r\n" + std::string(EN);
+	send(client.getFd(), response.c_str(), response.size(), 0);
 	return (response);
 }
