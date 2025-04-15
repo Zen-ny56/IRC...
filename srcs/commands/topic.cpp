@@ -80,7 +80,7 @@ void Server::topicCommand(int fd, std::string const &message)
     }
     if (channel.getTopRes() && !channel.isOperator(fd))
     {
-        std::string rpl_topic = std::string(RED) + ":" + this->hostname + " 473 " + client.getNickname() + " " + channelName  + ": Cannot change topic: Topic is locked." +std::string(EN) + "\r\n";
+        std::string rpl_topic = std::string(RED) + ":" + this->hostname + " 473 " + client.getNickname() + " " + channelName  + ": Cannot change topic: Topic is locked." + std::string(EN) + "\r\n";
         send(fd, rpl_topic.c_str(), rpl_topic.size(), 0);
         return ;
     }
