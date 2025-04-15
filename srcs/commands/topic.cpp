@@ -74,7 +74,7 @@ void Server::topicCommand(int fd, std::string const &message)
 
     if (channel.getTopic() == topic)
     {
-        std::string topicChangedMessage = "TOPIC " + channelName + " TOPIC " + " :" + topic + "\r\n";
+        std::string topicChangedMessage = ":" + client.getNickname() + " TOPIC " + channelName + " :" + topic + "\r\n";
         channel.broadcastToChannel(topicChangedMessage);
         return;
     }
@@ -86,7 +86,7 @@ void Server::topicCommand(int fd, std::string const &message)
     }
     channel.setTopic(topic);
 
-    std::string topicChangedMessage = "TOPIC " + channelName + " :" + topic + "\r\n";
+    std::string topicChangedMessage = ":" + client.getNickname() + " TOPIC " + channelName + " :" + topic + "\r\n";
     channel.broadcastToChannel(topicChangedMessage);
     std::string rpl_topicset = std::string(YEL) + ":" + this->hostname + " 332 " + client.getNickname() + " " + channelName + " :" + topic + "\r\n";
     send(fd, rpl_topicset.c_str(), rpl_topicset.size(), 0);

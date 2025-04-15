@@ -3,6 +3,7 @@
 #include <cstdio>
 void Server::kickCommand(int fd, const std::string &message)
 {
+    //Check if channel is empty , delete it if it is
     if (message.rfind("KICK ", 0) == 0)
     {
         std::vector<Client>::iterator it = getClient(fd);
@@ -88,13 +89,18 @@ void Server::kickCommand(int fd, const std::string &message)
                 continue;
             }
 
-            std::string kickMessage = ":" + client.getNickname() + " KICKED " + channelName + " " + *userIt;
-            if (!comment.empty())
+            if (comment.empty())
             {
-                kickMessage += " :" + comment;
+                std::string kickMessage = ":" + client.getNickname() + " KICK " + channelName + " " + target.getNickname() + " :You have been kicked from the channel\r\n";
+                send(target.getFd(), kickMessage.c_str(), kickMessage.size(), 0);
+                kickMessage = ":" + client.getNickname() + " KICK " + channelName + " " + target.getNickname() + comment + "\r\n";
+                channel.broadcastToChannel(kickMessage);
             }
-            kickMessage += "\r\n";
-            channel.broadcastToChannel(kickMessage);
+            else
+            {
+                std::string kickMessage = ":" + client.getNickname() + " KICK " + channelName + " " + target.getNickname() + comment + "\r\n";
+                send(target.getFd(), kickMessage.c_str(), kickMessage.size(), 0);
+            }
             channel.removeClient(target.getFd());
         }
     }

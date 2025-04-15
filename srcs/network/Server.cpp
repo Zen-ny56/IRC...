@@ -5,84 +5,27 @@ Server::Server() { serSocketFd = -1; }
 void Server::clearClients(int fd)
 {
 	std::vector<std::string> channelstodelete;
-	// // Remove from clients vector and all channels
-	if (fd > 3)
+	// Remove from clients vector and all channels
+	for (size_t i = 0; i < clients.size(); i++)
 	{
-		for (size_t i = 0; i < clients.size(); i++)
+		if (clients[i].getFd() == fd)
 		{
-			if (clients[i].getFd() == fd)
-			{
-				// Remove client from all channels
-				std::string nickname = clients[i].getNickname();
-				std::string b;
-				for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
-				{
-					Channel &channel = it->second;
-					if (channel.isInChannel(fd))
-					{
-					// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
-						if (channel.isInviteOnly() && channel.isInvitedUser(fd))
-							channel.removeClientFromInvitation(fd);
-						if (!channel.isInvited(fd))
-							channel.remove_isInvited(fd);
-						// Broadcast quit message to channel members
-						std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
-						channel.broadcastToChannel(quitMsg);
-						channel.removeClient(fd);
-						// Remove channel if empty
-						if (channel.listUsers().empty())
-						{
-							b = it->first;
-							channelstodelete.push_back(b);
-						}
-					}
-				}
-				//Deleting channel that's empty
-				for (std::vector<std::string>::iterator ct = channelstodelete.begin(); ct != channelstodelete.end(); ++ct)
-				{
-					std::map<std::string, Channel>::iterator bt = channels.find(*ct);
-					if (bt != channels.end())
-					{
-						if (this->modes != NULL)
-							delete this->modes;
-						channels.erase(bt->first);
-					}
-				}
-				nicknameMap.erase(nickname);
-				clients.erase(clients.begin() + i);
-				break;
-			}
-		}
-		for (size_t i = 0; i < fds.size(); i++)
-		{
-			if (fds[i].fd == fd)
-			{
-				close(fds[i].fd);
-				fds.erase(fds.begin() + i);
-				break;
-			}
-		}
-	}
-	else if (fd == 3)
-	{
-		for (size_t i = 0; i < clients.size(); i++)
-		{
+			// Remove client from all channels
 			std::string nickname = clients[i].getNickname();
 			std::string b;
 			for (std::map<std::string, Channel>::iterator it = channels.begin(); it != channels.end(); ++it)
 			{
 				Channel &channel = it->second;
-				if (channel.isInChannel(clients[i].getFd()))
+				if (channel.isInChannel(fd))
 				{
-				// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
-					if (channel.isInviteOnly() && channel.isInvitedUser(clients[i].getFd()))
-						channel.removeClientFromInvitation(clients[i].getFd());
-					if (!channel.isInvited(clients[i].getFd()))
-						channel.remove_isInvited(clients[i].getFd());
+					if (channel.isInviteOnly() && channel.isInvitedUser(fd))
+						channel.removeClientFromInvitation(fd);
+					if (!channel.isInvited(fd))
+						channel.remove_isInvited(fd);
 					// Broadcast quit message to channel members
 					std::string quitMsg = ":" + nickname + " QUIT :Client exited\r\n";
 					channel.broadcastToChannel(quitMsg);
-					channel.removeClient(clients[i].getFd());
+					channel.removeClient(fd);
 					// Remove channel if empty
 					if (channel.listUsers().empty())
 					{
@@ -97,15 +40,13 @@ void Server::clearClients(int fd)
 				std::map<std::string, Channel>::iterator bt = channels.find(*ct);
 				if (bt != channels.end())
 				{
-					if (this->modes != NULL)
-						delete this->modes;
 					channels.erase(bt->first);
 				}
 			}
 			nicknameMap.erase(nickname);
 			clients.erase(clients.begin() + i);
+			break;
 		}
-		// std::cout << "We reach here" << std::endl;
 	}
 }
 
@@ -254,7 +195,6 @@ void Server::receiveNewData(int fd)
 	memset(buff, 0, sizeof(buff)); //-> clear the buffer
 
 	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1, 0); //-> receive the data
-	// sendPingToClients();
 	std::vector<Client>::iterator it = getClient(fd);
 	if (it == clients.end())
 		throw std::runtime_error("Client was not found]\n");
@@ -263,7 +203,17 @@ void Server::receiveNewData(int fd)
 	{ //-> check if the client disconnected
 		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
 		clearClients(fd); //-> clear the client
-		close(fd);		  //-> close the client socket
+		close(fd);
+		std::cout << " Do we come here " << std::endl;
+		for (std::vector<struct pollfd>::iterator it = fds.begin(); it != fds.end(); ++it)
+		{
+			if (it->fd == fd)
+			{
+				fds.erase(it);
+				break;
+			}
+		}
+		//-> close the client socket
 	}
 	else 
 	{ //-> print the received data
@@ -307,40 +257,8 @@ void Server::receiveNewData(int fd)
 		{
 			std::string buff = "Invalid Command: try again!\n";
 			send(fd, buff.c_str(), buff.size(), 0);
-			// std::cout << YEL << "Client <" << fd << "> Data: " << WHI << buff;
 		} // handling authentication error to be displayed to the client.
 	}
-}
-
-// void Server::receivePong(int fd)
-// {
-// 	time_t currentTime = time(NULL); // Get current timestamp
-//     std::map<int, time_t>::iterator it = clientLastPing.find(fd);
-// 	it->second = currentTime;
-// }
-
-void Server::reverseRotate(std::stack<std::string> &s)
-{
-	if (s.empty() || s.size() == 1)
-		return; // Nothing to rotate if stack has 0 or 1 element
-	std::queue<std::string> tempQueue;
-	// Step 1: Move all elements except the last one to a queue
-	while (s.size() > 1)
-	{
-		tempQueue.push(s.top());
-		s.pop();
-	}
-	// Step 2: The last remaining element is the bottom-most element
-	std::string bottomElement = s.top();
-	s.pop();
-	// Step 3: Restore the elements back to the stack in original order
-	while (!tempQueue.empty())
-	{
-		s.push(tempQueue.front());
-		tempQueue.pop();
-	}
-	// Step 4: Push the bottom-most element to the top
-	s.push(bottomElement);
 }
 
 void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
@@ -367,13 +285,6 @@ void Server::processQuit(int fd, const std::string &reason)
 	// Remove the client from the server
 }
 
-// void Server::disconnectClient(int fd)
-// {
-// 	clearClients(fd);
-// 	close(fd);
-// 	std::cout << RED << "Client <" << fd << "> Disconnected" << std::endl;
-// }
-
 void Server::acceptNewClient()
 {
 	Client cli; //-> create a new client
@@ -384,7 +295,7 @@ void Server::acceptNewClient()
 	int incofd = accept(serSocketFd, (sockaddr *)&(cliadd), &len); //-> accept the new client
 	if (incofd == -1)
 	{
-		// std::cout << "accept() failed" << std::endl;
+		std::cout << "accept() failed" << std::endl;
 		return;
 	}
 	if (fcntl(incofd, F_SETFL, O_NONBLOCK) == -1) //-> set the socket option (O_NONBLOCK) for non-blocking socket
@@ -400,10 +311,8 @@ void Server::acceptNewClient()
 	cli.setFd(incofd);							//-> set the client file descriptor
 	cli.setIpAdd(inet_ntoa((cliadd.sin_addr))); //-> convert the ip address to string and set it
 	cli.setNeedsCap(false);
-	clients.push_back(cli);						//-> add the client to the vector of clients
-	fds.push_back(newPoll);						//-> add the client socket to the pollfd
-	// clientLastPing[cli.getFd()] = time(NULL);
-	// authenticatedClients[incofd] = false;
+	clients.push_back(cli);	//-> add the client to the vector of clients
+	fds.push_back(newPoll);	//-> add the client socket to the pollfd
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
 
@@ -412,7 +321,7 @@ void Server::serSocket()
 	int en = 1;
 	struct sockaddr_in add;
 	struct pollfd newPoll;
-	add.sin_family = AF_INET;		  //-> set the address family to ipv4
+	add.sin_family = AF_INET;//-> set the address family to ipv4
 	add.sin_addr.s_addr = INADDR_ANY; //-> set the address to any local machine address
 	add.sin_port = htons(this->port); //-> convert the port to network byte order (big endian)
 
@@ -441,7 +350,6 @@ void Server::serverInit(int port, std::string pass)
 
 	if (!gethostname(this->hostname, sizeof(this->hostname)))
 		this->startTime = getCurrentDateTime();
-	this->modes = NULL;
 	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
 	std::cout << "Listening on " << this->hostname << " on " << this->port << " \r\n";
 	while (Server::signal == false)
@@ -454,7 +362,7 @@ void Server::serverInit(int port, std::string pass)
 			if (fds[i].revents & POLLIN)
 			{ //-> check if there is data to read
 				if (fds[i].fd == serSocketFd)
-					acceptNewClient(); //-> accept new client
+					acceptNewClient(); //-> accept ne w client
 				else
 					receiveNewData(fds[i].fd); //-> receive new data from a registered client
 			}
@@ -638,7 +546,7 @@ void Server::processNickUser(Client& client, const std::string &nickname)
 	if (!oldNickname.empty())
 		nicknameMap.erase(oldNickname); // Remove old nickname from the map
 	client.setNickname(nickname);
-	nicknameMap[nickname] = client.getFd();																								   // Add the new nickname to the map
+	nicknameMap[nickname] = client.getFd();
 	std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() + "\r\n" + std::string(EN); // Inform the client of the nickname change
 	send(client.getFd(), response.c_str(), response.length(), 0);
 	std::cout << "Client <" << client.getFd() << "> changed nickname to: " << nickname << std::endl;
@@ -754,8 +662,9 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 	channel.addClient(fd);
 	std::cout << channel.getKey() << std::endl;
 	// 5. Broadcast JOIN message to all clients in the channel
-	std::string joinMessage = ":" + client.getNickname() + "!~" + client.getUserName() + "@" + this->hostname +  " JOIN :" + channelName + "\r\n" + std::string(EN);
+	std::string joinMessage = std::string(EN) + ":" + client.getNickname() + "!~" + client.getUserName() + "@" + this->hostname +  " JOIN :" + channelName + "\r\n";
 	channel.broadcastToChannel(joinMessage);
+	send(fd, joinMessage.c_str(), joinMessage.size(), 0);
 	// channel.removeClientFromInvitation(fd);
 	// 6. Send the channel topic (or indicate no topic set)
 	if (!channel.getTopic().empty())
@@ -846,6 +755,11 @@ void Server::processPrivmsg(int fd, const std::string &message)
 	}
 	// Extract the actual message text
 	std::string text = message.substr(textStart);
+	if (text[0] != ':')
+	{
+		std::cerr << "Invalid msg param" << std::endl;
+		return;
+	}
 	if (target[0] == '#')
 	{
 		std::map<std::string, Channel>::iterator it = channels.find(target);
@@ -864,7 +778,8 @@ void Server::processPrivmsg(int fd, const std::string &message)
 			return;
 		}
 		// Send the message to the channel members
-		channel.broadcastToChannel(text);
+		std::string response = std::string(EN) + ":" + sender.getNickname() + "!~" + sender.getUserName() + "@" + this->hostname +  " PRIVMSG " + it->first + " " + text +  "\r\n";
+		channel.broadcastToChannel(response);
 	}
 	else
 	{
@@ -877,7 +792,7 @@ void Server::processPrivmsg(int fd, const std::string &message)
 		}
 		Client &recepient = (*this)[ct];
 		// Send the private message to the user
-		std::string response = ":" + sender.getNickname() + " PRIVMSG " + recepient.getNickname() + " :" + text + "\r\n";
+		std::string response = ":" + sender.getNickname() + " PRIVMSG " + recepient.getNickname() + " " + text + "\r\n";
 		send(recepient.getFd(), response.c_str(), response.size(), 0);
 	}
 }
@@ -917,4 +832,9 @@ int stringToInt(const std::string &str)
 	int number;
 	ss >> number; // Convert string to integer
 	return number;
+}
+
+const char* Server::getHostname() const
+{
+	return this->hostname;
 }
