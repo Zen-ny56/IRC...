@@ -65,12 +65,12 @@ void Server::closeFds()
 {
 	for (size_t i = 0; i < clients.size(); i++)
 	{ //-> close all the clients
-		std::cout << RED << "Client <" << clients[i].getFd() << "> Disconnected" << WHI << std::endl;
+		std::cout << RED << "Client <" << clients[i].getFd() << "> Disconnected" << EN << std::endl;
 		close(clients[i].getFd());
 	}
 	if (serSocketFd != -1)
 	{ //-> close the server socket
-		std::cout << RED << "Server <" << serSocketFd << "> Disconnected" << WHI << std::endl;
+		std::cout << RED << "Server <" << serSocketFd << "> Disconnected" << EN << std::endl;
 		close(serSocketFd);
 	}
 }
@@ -201,7 +201,7 @@ void Server::receiveNewData(int fd)
 	Client &client = (*this)[it];
 	if (bytes <= 0)
 	{ //-> check if the client disconnected
-		std::cout << RED << "Client <" << fd << "> Disconnected" << WHI << std::endl;
+		std::cout << RED << "Client <" << fd << "> Disconnected" << EN << std::endl;
 		clearClients(fd); //-> clear the client
 		close(fd);
 		std::cout << " Do we come here " << std::endl;
@@ -261,6 +261,27 @@ void Server::receiveNewData(int fd)
 	}
 }
 
+// void Server::pingCMD(const std::string& line, Client& client)
+// {
+// 	if (line.size() < 2){
+// 		std::string =
+// 		sendToClient(cl->getfd(), ERR_NEEDMOREPARAMS " * PING :Not enough parameters\r\n");
+// 		return ;
+// 	} else if (line.size() > 2){
+// 		sendToClient(cl->getfd(), ERR_NOORIGIN  "PING :No origin specified\r\n");
+// 		return ;
+// 	} else if (line[1].empty()){
+// 		sendToClient(cl->getfd(), ERR_NOORIGIN "PING :No origin specified\r\n");
+// 		return ;
+// 	}
+// 	if (cl->getisRegistered() == false) {
+// 		sendToClient(cl->getfd(), ERR_NOTREGISTERED ":You have not registered\r\n");
+// 		return ;
+// 	}
+
+// 	sendToClient(cl->getfd(), "PONG " + line[1] + "\r\n");
+// }
+
 void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
 {
 	std::string extracted;
@@ -313,7 +334,7 @@ void Server::acceptNewClient()
 	cli.setNeedsCap(false);
 	clients.push_back(cli);	//-> add the client to the vector of clients
 	fds.push_back(newPoll);	//-> add the client socket to the pollfd
-	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
+	std::cout << GRE << "Client <" << incofd << "> Connected" << EN << std::endl;
 }
 
 void Server::serSocket()
@@ -350,7 +371,7 @@ void Server::serverInit(int port, std::string pass)
 
 	if (!gethostname(this->hostname, sizeof(this->hostname)))
 		this->startTime = getCurrentDateTime();
-	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << WHI << std::endl;
+	std::cout << GRE << "Server <" << serSocketFd << "> Connected" << EN << std::endl;
 	std::cout << "Listening on " << this->hostname << " on " << this->port << " \r\n";
 	while (Server::signal == false)
 	{ //-> run the server until the signal is received 
@@ -653,7 +674,7 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 	}
 	if (!channel.getKey().empty() && channel.getKey() != key)
 	{
-		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 475 " + client.getNickname() + " " + channelName + " :Cannot join channel (+k)" + std::string(WHI) + "\r\n";
+		std::string errorMsg = std::string(RED) + ":" + this->hostname + " 475 " + client.getNickname() + " " + channelName + " :Cannot join channel (+k)" + std::string(EN) + "\r\n";
 		send(fd, errorMsg.c_str(), errorMsg.size(), 0);
 		return;
 	}
@@ -729,9 +750,7 @@ void Server::processPrivmsg(int fd, const std::string &message)
 		throw std::runtime_error("Error finding client\n");
 	Client &sender = (*this)[bt];
 	size_t commandEnd = message.find(' ');
-	// if (commandEnd == std::string::npos || message.substr(0, commandEnd) != "PRIVMSG") {
-	//     std::string error = std::string(RED) + "421: Unknown command\r\n" + std::string(WHI);
-	// }
+
 	// Skip the "PRIVMSG" part
 	size_t targetStart = commandEnd + 1;			  // Position after "PRIVMSG "
 	size_t spacePos = message.find(' ', targetStart); // Find space after target
@@ -757,7 +776,7 @@ void Server::processPrivmsg(int fd, const std::string &message)
 	std::string text = message.substr(textStart);
 	if (text[0] != ':')
 	{
-		std::cerr << "Invalid msg param" << std::endl;
+		std::cout << "Invalid msg param" << std::endl;
 		return;
 	}
 	if (target[0] == '#')

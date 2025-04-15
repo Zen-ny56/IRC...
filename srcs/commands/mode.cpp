@@ -119,14 +119,14 @@ void Server::handleMode(int fd, const std::string &message)
 	std::map<std::string, Channel>::iterator bt = channels.find(channelName);
 	if (bt == channels.end())
 	{
-		std::string msg = std::string(RED) + ":" + this->hostname + " 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n" + std::string(WHI);
+		std::string msg = std::string(RED) + ":" + this->hostname + " 403 " + client.getNickname() + " " + channelName + " :No such channel\r\n" + std::string(EN);
 		send(fd, msg.c_str(), msg.size(), 0);
 		return;
 	}
 	Channel &channel = bt->second;
 	if (!channel.isOperator(fd))
 	{
-		std::string msg = std::string(RED) + ":" + this->hostname + " 482 " + client.getNickname() + " " + channel.getChannelName() + " :You're not channel operator\r\n" + std::string(WHI);
+		std::string msg = std::string(RED) + ":" + this->hostname + " 482 " + client.getNickname() + " " + channel.getChannelName() + " :You're not channel operator\r\n" + std::string(EN);
 		send(fd, msg.c_str(), msg.size(), 0);
 		return;
 	}
@@ -160,7 +160,7 @@ void Channel::executeMode(Client &client, Server& server)
 				// Check if it's valid integer and convert
 				if (isNumber(ct->second) == false)
 				{
-					msg = std::string(RED) + ":ircserv 461 " + client.getNickname() + " " + this->getChannelName() + " :Not enough parameters" + std::string(WHI);
+					msg = std::string(RED) + ":ircserv 461 " + client.getNickname() + " " + this->getChannelName() + " :Not enough parameters" + std::string(EN);
 					send(client.getFd(), msg.c_str(), msg.size(), 0);
 					return;
 				}
