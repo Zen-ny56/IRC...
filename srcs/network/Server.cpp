@@ -18,7 +18,6 @@ void Server::clearClients(int fd)
 				Channel &channel = it->second;
 				if (channel.isInChannel(fd))
 				{
-				// std::cout << "PYSSSSSSSVVFCCCCC" << std::endl;
 					if (channel.isInviteOnly() && channel.isInvitedUser(fd))
 						channel.removeClientFromInvitation(fd);
 					if (!channel.isInvited(fd))
@@ -262,30 +261,6 @@ void Server::receiveNewData(int fd)
 	}
 }
 
-// void Server::reverseRotate(std::stack<std::string> &s)
-// {
-// 	if (s.empty() || s.size() == 1)
-// 		return; // Nothing to rotate if stack has 0 or 1 element
-// 	std::queue<std::string> tempQueue;
-// 	// Step 1: Move all elements except the last one to a queue
-// 	while (s.size() > 1)
-// 	{
-// 		tempQueue.push(s.top());
-// 		s.pop();
-// 	}
-// 	// Step 2: The last remaining element is the bottom-most element
-// 	std::string bottomElement = s.top();
-// 	s.pop();
-// 	// Step 3: Restore the elements back to the stack in original order
-// 	while (!tempQueue.empty())
-// 	{
-// 		s.push(tempQueue.front());
-// 		tempQueue.pop();
-// 	}
-// 	// Step 4: Push the bottom-most element to the top
-// 	s.push(bottomElement);
-// }
-
 void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
 {
 	std::string extracted;
@@ -336,10 +311,8 @@ void Server::acceptNewClient()
 	cli.setFd(incofd);							//-> set the client file descriptor
 	cli.setIpAdd(inet_ntoa((cliadd.sin_addr))); //-> convert the ip address to string and set it
 	cli.setNeedsCap(false);
-	clients.push_back(cli);						//-> add the client to the vector of clients
-	fds.push_back(newPoll);						//-> add the client socket to the pollfd
-	// clientLastPing[cli.getFd()] = time(NULL);
-	// authenticatedClients[incofd] = false;
+	clients.push_back(cli);	//-> add the client to the vector of clients
+	fds.push_back(newPoll);	//-> add the client socket to the pollfd
 	std::cout << GRE << "Client <" << incofd << "> Connected" << WHI << std::endl;
 }
 
@@ -348,7 +321,7 @@ void Server::serSocket()
 	int en = 1;
 	struct sockaddr_in add;
 	struct pollfd newPoll;
-	add.sin_family = AF_INET;		  //-> set the address family to ipv4
+	add.sin_family = AF_INET;//-> set the address family to ipv4
 	add.sin_addr.s_addr = INADDR_ANY; //-> set the address to any local machine address
 	add.sin_port = htons(this->port); //-> convert the port to network byte order (big endian)
 
@@ -573,7 +546,7 @@ void Server::processNickUser(Client& client, const std::string &nickname)
 	if (!oldNickname.empty())
 		nicknameMap.erase(oldNickname); // Remove old nickname from the map
 	client.setNickname(nickname);
-	nicknameMap[nickname] = client.getFd();																								   // Add the new nickname to the map
+	nicknameMap[nickname] = client.getFd();
 	std::string response = std::string(GRE) + ":" + oldNickname + " NICK " + client.getNickname() + "\r\n" + std::string(EN); // Inform the client of the nickname change
 	send(client.getFd(), response.c_str(), response.length(), 0);
 	std::cout << "Client <" << client.getFd() << "> changed nickname to: " << nickname << std::endl;
