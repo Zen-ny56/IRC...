@@ -11,7 +11,6 @@ std::string getCurrentDateTime()
 
     // Buffer to hold formatted date/time string
     char buffer[80];
-
     // Format: "YYYY-MM-DD HH:MM:SS"
     std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localTime);
 
@@ -69,7 +68,6 @@ int main(int ac, char **av)
 	}
     catch (const std::exception &e)
     {
-        ser.clearClients(3);
         ser.closeFds(); // Close open file descriptors
         std::cerr << e.what() << std::endl;
 	}

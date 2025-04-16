@@ -137,8 +137,6 @@ void Server::authenticate(Client& client, const std::string &line)
     std::string command, type;
     
 	stream >> command;
-	std::cout << "Hoped into the wrong place" << std::endl;
-	// std::cout << command << std::endl;
     if (command == "NICK")
 	{
         std::string nickname;
@@ -204,7 +202,6 @@ void Server::receiveNewData(int fd)
 		std::cout << RED << "Client <" << fd << "> Disconnected" << EN << std::endl;
 		clearClients(fd); //-> clear the client
 		close(fd);
-		std::cout << " Do we come here " << std::endl;
 		for (std::vector<struct pollfd>::iterator it = fds.begin(); it != fds.end(); ++it)
 		{
 			if (it->fd == fd)
@@ -243,14 +240,14 @@ void Server::receiveNewData(int fd)
                 kickCommand(fd, line);
             else if (line.rfind("TOPIC ", 0) == 0)
                 topicCommand(fd, line);
-            else if (line.find("QUIT", 0) == 0)
-                processQuit(fd, line);
             else if (line.find("JOIN", 0) == 0)
                 handleChannel(fd, line);
             else if (line.find("PRIVMSG", 0) == 0)
                 processPrivmsg(fd, line);
             else if (line.find("MODE") != std::string::npos)
                 handleMode(fd, line);
+			else if (line.find("PING") != std::string::npos)
+				pingCMD(line, client);
 			}
 		}
 		else
@@ -261,26 +258,23 @@ void Server::receiveNewData(int fd)
 	}
 }
 
-// void Server::pingCMD(const std::string& line, Client& client)
-// {
-// 	if (line.size() < 2){
-// 		std::string =
-// 		sendToClient(cl->getfd(), ERR_NEEDMOREPARAMS " * PING :Not enough parameters\r\n");
-// 		return ;
-// 	} else if (line.size() > 2){
-// 		sendToClient(cl->getfd(), ERR_NOORIGIN  "PING :No origin specified\r\n");
-// 		return ;
-// 	} else if (line[1].empty()){
-// 		sendToClient(cl->getfd(), ERR_NOORIGIN "PING :No origin specified\r\n");
-// 		return ;
-// 	}
-// 	if (cl->getisRegistered() == false) {
-// 		sendToClient(cl->getfd(), ERR_NOTREGISTERED ":You have not registered\r\n");
-// 		return ;
-// 	}
-
-// 	sendToClient(cl->getfd(), "PONG " + line[1] + "\r\n");
-// }
+void Server::pingCMD(const std::string& line, Client& client)
+{
+	if (line.size() < 2)
+	{
+		std::string msg = std::string(RED) + ":" + this->hostname + " 461 " + client.getNickname() + " PING :Not enough parameters\r\n" + std::string(EN);
+		send(client.getFd(), msg.c_str(), msg.size(), 0);
+		return ;
+	} 
+	else if (line.size() > 2 || line.empty())
+	{
+		std::string msg = std::string(RED) + ":" + this->hostname + " 461 " + client.getNickname() + " PING :No origin specified\r\n" + std::string(EN);
+		send(client.getFd(), msg.c_str(), msg.size(), 0);
+		return ;
+	}
+	std::string msg = std::string(EN) + "PONG" + line[1] + "\r\n";
+	send(client.getFd(), msg.c_str(), msg.size(), 0);
+}
 
 void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
 {
@@ -292,18 +286,6 @@ void Server::resetModeBool(Channel &channel, std::string mode, bool condition)
 	}
 	std::map<std::string, bool>::iterator it = channel.getModes().find(extracted);
 	it->second = condition;
-}
-
-void Server::processQuit(int fd, const std::string &reason)
-{
-	std::string nickname = clients[fd].getNickname();
-	// Compose the QUIT message
-	std::string quitMessage = ":" + nickname + " QUIT :Quit: " + (reason.empty() ? "" : reason);
-	// Notify all clients sharing channels with the quitting client
-	// broadcastToSharedChannels(fd, quitMessage); // Assume this function broadcasts to all relevant clients
-	// std::string errorMessage = "ERROR :Closing link (" + nickname + ") [Quit: " + reason + "]";
-	// send(fd, quitMessage.c_str(), quitMessage.size(), 0);
-	// Remove the client from the server
 }
 
 void Server::acceptNewClient()
@@ -686,7 +668,6 @@ void Server::joinChannel(int fd, const std::string &channelName, const std::stri
 	std::string joinMessage = std::string(EN) + ":" + client.getNickname() + "!~" + client.getUserName() + "@" + this->hostname +  " JOIN :" + channelName + "\r\n";
 	channel.broadcastToChannel(joinMessage);
 	send(fd, joinMessage.c_str(), joinMessage.size(), 0);
-	// channel.removeClientFromInvitation(fd);
 	// 6. Send the channel topic (or indicate no topic set)
 	if (!channel.getTopic().empty())
 	{

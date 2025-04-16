@@ -38,16 +38,13 @@ class Server //-> class for server
         int port; //-> server port
         std::string password;
         char hostname[256];
-        static const char BASE64_CHARS[];
         std::string startTime;
         std::vector<Client> clients; //-> vector of Clients
         std::vector<struct pollfd> fds; //-> vector of pollfd
-        // std::map<int, time_t> clientLastPing;
         std::map<std::string, int> nicknameMap; //-> map for nickname check
         std::map<std::string, Channel> channels; // ->map of Channels
     public:
         Server(); //-> default constructor
-
         void serverInit(int port, std::string pass); //-> server initialization
         const char* getHostname() const;
         void serSocket(); //-> server socket creation
@@ -66,7 +63,6 @@ class Server //-> class for server
         void capEnd(int fd);
         std::vector<Client>::iterator getClient(int fd);
         void handleChannel(int fd, const std::string& message);
-        void processQuit(int fd, const std::string& reason);
         void disconnectClient(int fd);
         void joinChannel(int fd, const std::string& channelName, const std::string& key);
         std::vector<std::string> splitByDelimiter(const std::string& str, char delimiter);
@@ -79,12 +75,9 @@ class Server //-> class for server
         void handleMode(int fd, const std::string& message); // Added
         void resetModeBool(Channel& channel, std::string mode, bool condition); // Added
         std::map<std::string, std::string>* parseMode(const std::string& message); // delete mode after executed
-        void reverseRotate(std::stack<std::string>& s); // Reverse rotate on stack in parsing
         void kickCommand(int fd, const std::string &message);
         void topicCommand(int fd, const std::string &message);
         void inviteCommand(int fd, std::string const &message);
-        static bool is_base64(unsigned char c);
-        std::string base64_decode(const std::string &encoded_string);
         int  authenticate(Client& client, const std::string &line, bool needsCap);
         void authenticate(Client& client, const std::string& line);
         void sendPingToClients();
@@ -92,6 +85,7 @@ class Server //-> class for server
         std::vector<std::string> storeInputLines(Client &client, const std::string &message);
         void clientWelcomeMSG(int fd, Client &client);
         int clearClients(int fd, bool isServer);
+        void pingCMD(const std::string& line, Client& client);
 };
 
 bool isNumber(const std::string &str);

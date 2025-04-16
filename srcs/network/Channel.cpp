@@ -251,3 +251,22 @@ void Channel::reverseRotate(std::stack<std::string> &s)
 	// Step 4: Push the bottom-most element to the top
 	s.push(bottomElement);
 }
+
+std::string Channel::getFalseParamsAsString(std::stack<std::string> falseParams)
+{
+	std::string result;
+	size_t count = falseParams.size();
+
+	for (size_t i = 0; i < count; ++i)
+	{
+		reverseRotate(falseParams);
+		// Get the top (original bottom-most) element
+		result += falseParams.top();
+		falseParams.pop();
+
+		if (i < count - 1)
+			result += " ";
+	}
+
+	return result;
+}
