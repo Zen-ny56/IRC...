@@ -58,9 +58,9 @@ class Channel
 		void removeClientFromInvitation(int fd);
 		int countInchannel();
 		void removeModeBools();
-        void parseMode(const std::string& message); // delete mode after executed
+        void parseMode(const std::string& message, Client& client); // delete mode after executed
 		void reverseRotate(std::stack<std::string>& s); // Reverse rotate on stack in parsing
 		void executeMode(Client &client, Server& server);
 		std::string generateRPL_CHANNELMODEIS(Client& client, Server& server); // Added
-
+		std::string getFalseParamsAsString(std::stack<std::string> falseParams);
 };

@@ -2,7 +2,7 @@
 #include "../../include/Client.hpp"
 #include "../../include/Channel.hpp"
 
-void Channel::parseMode(const std::string &message)
+void Channel::parseMode(const std::string &message, Client& client)
 {
 	std::istringstream iss(message);
 	std::string command, channelName, token;
@@ -71,8 +71,6 @@ void Channel::parseMode(const std::string &message)
 			falseParams.push(type);
 		}
 	}
-	// Debug Output
-	//
 	int j = k;
 	while (k-- > 1)
 		reverseRotate(modeWitPams);
@@ -98,10 +96,11 @@ void Channel::parseMode(const std::string &message)
 		modeWitPams.pop();
 		modeMap[emptyPam] = "";
 	}
-	std::cout << "\n\nMODE MAP:\n";
-	for (std::map<std::string, std::string>::iterator it = modeMap.begin(); it != modeMap.end(); ++it)
+	std::string warning = getFalseParamsAsString(falseParams);
+	if (!warning.empty())
 	{
-		std::cout << it->first << " -> " << (it->second.empty() ? "(no param)" : it->second) << std::endl;
+    	std::string msg =  std::string(EN) + "Warning: extra parameters detected: " + warning + "\r\n";
+		send(client.getFd(), msg.c_str(), msg.size(), 0);
 	}
 	this->modes = modeMap;
 }
@@ -130,7 +129,7 @@ void Server::handleMode(int fd, const std::string &message)
 		send(fd, msg.c_str(), msg.size(), 0);
 		return;
 	}
-	channel.parseMode(message);
+	channel.parseMode(message, client);
 	channel.executeMode(client, *this);
 	channel.generateRPL_CHANNELMODEIS(client, *this);
 }
@@ -266,7 +265,6 @@ void Channel::executeMode(Client &client, Server& server)
 
 std::string Channel::generateRPL_CHANNELMODEIS(Client &client, Server &server)
 {
-	// std::cout << "Why don't we enter here" << std::endl;
 	std::string modeString = "+";
 	std::string modeArgs;
 	// Check which modes are active in the channel

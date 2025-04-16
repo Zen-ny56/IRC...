@@ -1,6 +1,0 @@
-<< CAP LS
-<< NICK zeni
-<< USER zeni zeni lab3r7s13.42abudhabi.ae :Zeni
->> CAP * LS :sasl
-<< CAP END
->> CAP END
