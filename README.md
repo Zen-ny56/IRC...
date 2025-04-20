@@ -12,8 +12,10 @@ We built a fully functioning IRC (Internet Relay Chat) server, compatible with p
 1️⃣ Class Structure & Server Architecture
 
 🧩 All other classes are part of the main Server class
+
   👥 Clients are stored as:
-    std::vector<Client> clients;
+     std::vector<Client> clients;
+  
   🛰️ Channels are stored as:
     std::map<std::string, Channel> channels;
 
@@ -48,6 +50,7 @@ It's added to the clients vector.
 3️⃣ Authentication
 
 🔐 Capability Negotiation
+
 Our authentication process supports both manual nc connections and automated irssi clients.
 
 We overloaded the authenticate() function to handle both workflows:
@@ -63,11 +66,13 @@ For irssi, we handled capability negotiation where the client sends PASS/NICK/US
 4️⃣ Channel Functionality
 
 🔗 JOIN Command
+
 On receiving JOIN #channel:
 
 If the channel doesn’t exist in our map, it gets created:
 
 std::map<std::string, Channel> channels;
+
 The user is added to the channel's user list.
 
 ⚙️ MODE Command
@@ -82,6 +87,7 @@ std::stack<std::string> params;
 Then we reverse rotate and pop() items from both stacks.
 
 Parsed modes and their arguments are stored in a map for that's an attribute for the Channel class:
+
   std::map<std::string, std::string> modes;
 
 🚀 Getting Started
