@@ -58,7 +58,9 @@ We overloaded the authenticate() function to handle both workflows:
 For nc users:
 
 PASS mypass
+
 NICK mynick
+
 USER myuser
 
 For irssi, we handled capability negotiation where the client sends PASS/NICK/USER automatically.
@@ -82,6 +84,7 @@ Parsing Modes with Parameters:
 We used two stacks to parse and pair modes with their parameters:
 
 std::stack<std::string> modewitParams;
+
 std::stack<std::string> params;
 
 Then we reverse rotate and pop() items from both stacks.
@@ -95,11 +98,15 @@ Parsed modes and their arguments are stored in a map for that's an attribute for
 Compile & Run
 
 make
+
 ./ircserv <port> <password>
 
 Connect with irssi:
+
 irssi
+
 /connect localhost <port> <password>
+
 /join #42
 
 💡 Key Learnings
