@@ -49,7 +49,7 @@ It's added to the clients vector.
 
 3️⃣ Authentication
 
-🔐 Capability Negotiation
+🔐 Capability Negotiations
 
 Our authentication process supports both manual nc connections and automated irssi clients.
 
@@ -63,7 +63,7 @@ NICK mynick
 
 USER myuser
 
-For irssi, we handled capability negotiation where the client sends PASS/NICK/USER automatically.
+For irssi, we handled capability negotiations where the client sends PASS/NICK/USER automatically.
 
 4️⃣ Channel Functionality
 
